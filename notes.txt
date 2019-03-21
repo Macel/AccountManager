@@ -1,0 +1,45 @@
+AccountManager: Abstract class with common methods/configuration for
+account managers of different data sources to sync information to.  Should
+contain data structures specifying lists of fields to pull from the source,
+along with information such as whether the field should remain synchronized
+after account creation and whether the field is the unique identifier or if it
+can be used to search for existing unsynchronized accounts.
+
+AccountManager Password Rules:
+Should a password be created for users via this tool?  Will it be set by a
+value provided in the data source?  Or will the target database handle creating
+the password?
+
+Password complexity / type (full words, random characters etc)
+
+Attribute Mappings:
+-Map data source fields to target database attributes
+-Include whether these attributes should be kept synchronized after account
+creation.
+
+Account activation status:
+-Which data source field(s) determine active/inactive status of AD account.
+
+
+ADAccountManager: Is the direct implementation of all of the necessary AD/LDAP
+function calls to support the sync process and inherits from AccountManager.
+
+-OU placement rules
+-Security group membership rules
+-Whether these rules are kept in sync after account creation
+
+
+
+
+
+*****
+
+AD sync rules...
+
+Attribute Mappings:
+each AD attribute to be synced from data source is a direct sync rule:
+datasource column name - to - AD attribute
+
+org unit:
+one sync rule that defines which column(s) in the datasource determine ou
+assignment in AD and how those datasource values map to which AD OU
