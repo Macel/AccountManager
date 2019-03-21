@@ -8,7 +8,7 @@ The long-term goal is to modularize this project to make it easy to write additi
 
 Since this is still very early in development, and I am in a time crunch to get the AD implementation done, I will stop here for now.. But feel free to contact me if you have any interest in this project including implementation questions, suggestions or a desire to contribute.
 
-
+Credit should also go to Vinay Sajip whose code I have integrated into this project as BufferingSMTPHandler.py for logging purposes.
 
 Requirements 
 ============ 
