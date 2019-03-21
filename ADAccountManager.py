@@ -8,14 +8,17 @@ handles all sync operations for an AD domain.
 from AccountManager import AccountManager
 from pyad import pyad
 from pyad import pyad_setdefaults
-from ADOrgUnitAssignments import ADOrgUnitAssignment, ADOrgUnitAssignmentRule
+from ADOrgUnitAssignments import ADOrgUnitAssignment
+from AssignmentRules import AssignmentRule
+from AttributeMapping import AttributeMapping
+from ADGroupAssignments import ADGroupAssignment
 
 
 class ADAccountManager(AccountManager):
     def __init__(self, ldap_server: str, username: str, password: str,
-                 orgUnitAssignments: tuple = (),
-                 attributesToMap: tuple = (),
-                 securityGroupAssignments: tuple = (),
+                 orgUnitAssignments: ADOrgUnitAssignment = (),
+                 attributesToMap: AttributeMapping = (),
+                 securityGroupAssignments: ADGroupAssignment = (),
                  maxSize: int = 500):
         """
         Takes the provided connection settings, a tuple of org unit assignment

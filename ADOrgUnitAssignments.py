@@ -1,13 +1,4 @@
-class ADOrgUnitAssignmentRule():
-    def __init__(self, sourceColumnName: str,
-                 sourceColumnExpectedValueRegex: str):
-        """
-        sourceColumnName is the name of data source column to be checked
-        sourceColumnExpectedValueRegex is a regular expression to test for
-        matching values in the source column on each user.
-        """
-        self._sourceColumnName
-        self._sourceColumnExpectedValueRegex
+from AssignmentRules import AssignmentRule
 
 
 class ADOrgUnitAssignment():
@@ -15,7 +6,7 @@ class ADOrgUnitAssignment():
     MATCH_ALL_RULES = 1
 
     def __init__(self, orgUnitDN: str, matchMethod: int,
-                 *rules: ADOrgUnitAssignmentRule):
+                 *rules: AssignmentRule):
         """
         orgUnitDN: The distringuished name of the OU that matching users
         should be placed in.
@@ -30,13 +21,7 @@ class ADOrgUnitAssignment():
         """
         self._rules = rules
         self._orgUnitDN = orgUnitDN
-
-    @property
-    def rules(self) -> tuple:
-        """
-        Returns a tuple of all the rules in this ADOrgUnitAssignment
-        """
-        return self._rules
+        self._matchMethod = matchMethod
 
     @property
     def orgUnitDN(self) -> str:
@@ -44,3 +29,19 @@ class ADOrgUnitAssignment():
         Returns the org unit distinguished name for this ADOrgUnitAssignment
         """
         return self._orgUnitDN
+
+    @property
+    def matchMethod(self) -> int:
+        """
+        Returns MATCH_ANY_RULE if the user qualifies for membership in this OU
+        if they match any one or more AssignmentRules.  Otherwise returns
+        MATCH_ALL_RULES if they must match all of the rules in this assignment.
+        """
+        return self._MatchMethod
+
+    @property
+    def rules(self) -> AssignmentRule:
+        """
+        Returns a tuple of all the AssignmentRules in this ADOrgUnitAssignment
+        """
+        return self._rules
