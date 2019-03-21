@@ -6,4 +6,24 @@ I am actively developing this to provide a solution for my employer to synchroni
 
 The long-term goal is to modularize this project to make it easy to write additional modules to support other systems (as data sources and destinations) as needed.  For example, the ability to use a SQL database as a data source, or the ability to sync to a specific product such as a financial system or timeclock management system could be added in.
 
-Since this is still very early in development, and I am in a time crunch to get the AD implementation done, I will stop here for now.. But feel free to contact me if you have any interest in this project including implementation questions, suggestions or a desire to contribute. 
+Since this is still very early in development, and I am in a time crunch to get the AD implementation done, I will stop here for now.. But feel free to contact me if you have any interest in this project including implementation questions, suggestions or a desire to contribute.
+
+
+
+Requirements 
+============ 
+
+The current plan for ADAccountManager is use pyad, available at https://github.com/zakird/pyad
+
+Installable via pip,
+::
+pip install pyad
+
+pyad requires pywin32, available at http://sourceforge.net/projects/pywin32 
+
+Also installable via pip,
+:: 
+pip install pywin32 
+
+
+
