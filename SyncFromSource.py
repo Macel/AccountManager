@@ -5,7 +5,7 @@ if __name__ == '__main__':
     from Settings import LOGGING_LEVEL, LOGGING_PATH, SMTP_SERVER_IP, \
         SMTP_SERVER_PORT, SMTP_SERVER_USERNAME, SMTP_FROM_ADDRESS, \
         SMTP_SERVER_PASSWORD, LOGGING_ALERTS_CONTACT, DATA_SOURCE_FILE, \
-        IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS,
+        IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
         AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS
     from AccountManager import AccountManager # for atom code completion
     from ADAccountManager import ADAccountManager

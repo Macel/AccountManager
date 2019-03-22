@@ -3,8 +3,10 @@ Configurable settings used by sync scripts.
 """
 
 import logging
-from ADOrgUnitAssignments import ADOrgUnitAssignment, ADOrgUnitAssignmentRule
+from ADOrgUnitAssignments import ADOrgUnitAssignment
 from AttributeMapping import AttributeMapping
+from ADGroupAssignments import ADGroupAssignment
+from AsignmentRules import AssignmentRule
 
 # Some Constants...
 SYNCHRONIZED = AttributeMapping.SYNCHRONIZED
@@ -50,13 +52,13 @@ DEFAULT_ACCOUNT_GRACE_PERIOD_DAYS = 30
 
 
 # AD Connection settings
-AD_DC = "dc.example.org"
-AD_USERNAME = "someusername"
-AD_PASSWORD = "somepassword"
+AD_DC = "dc.mydomain.org"
+AD_USERNAME = "ldapuser"
+AD_PASSWORD = "ldappassword"
 
 
 # The DN of the default OU for users who do not match any OU assignment rules
-AD_DEFAULT_USER_OU = "OU=Unassigned,OU=Users,DC=example,DC=org"
+AD_DEFAULT_USER_OU = "OU=Unassigned,OU=Users,OU=district,DC=mydomain,DC=org"
 
 
 # AD Attribute map:  Each entry is the column name from the import CSV file,
@@ -79,77 +81,77 @@ AD_ATTRIBUTE_MAP = (
 # from the AD_OU_ASSIGNMENTS list
 # Note that assignment rules are regular expressions.
 GRADE_PK_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade PK[3-4]$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade PK[3-4]$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_K_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade K$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade K$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_1_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 1$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 1$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_2_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 2$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 2$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_3_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 3$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 3$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_4_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 4$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 4$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_5_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 5$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 5$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_6_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 6$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 6$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_7_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 7$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 7$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_8_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 8$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 8$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_9_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 9$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 9$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_10_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 10$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 10$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_11_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 11$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 11$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 GRADE_12_OU_ASSIGNMENT_RULES = (
-    ADOrgUnitAssignmentRule("DEPARTMENT", "^Grade 12$"),
-    ADOrgUnitAssignmentRule("ACTIVESTATUS", "ACTIVE")
+    AssignmentRule("DEPARTMENT", "^Grade 12$"),
+    AssignmentRule("ACTIVESTATUS", "ACTIVE")
 )
 
 AD_OU_ASSIGNMENTS = (
-    ADOrgUnitAssignment("OU=PK,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_PK_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=K,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_K_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=1,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_1_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=2,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_2_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=3,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_3_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=4,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_4_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=5,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_5_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=6,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_6_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=7,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_7_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=8,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_8_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=9,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_9_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=10,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_10_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=11,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_11_OU_ASSIGNMENT_RULES),
-    ADOrgUnitAssignment("OU=12,OU=Students,OU=Users,OU=CPS,DC=colchesterct,DC=org", MATCH_ALL_RULES, GRADE_12_OU_ASSIGNMENT_RULES)
+    ADOrgUnitAssignment("OU=PK,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_PK_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=K,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_K_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=1,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_1_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=2,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_2_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=3,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_3_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=4,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_4_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=5,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_5_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=6,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_6_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=7,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_7_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=8,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_8_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=9,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_9_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=10,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_10_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=11,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_11_OU_ASSIGNMENT_RULES),
+    ADOrgUnitAssignment("OU=12,OU=Students,OU=Users,OU=district,DC=mydomain,DC=org", MATCH_ALL_RULES, GRADE_12_OU_ASSIGNMENT_RULES)
 )
 
 
@@ -161,62 +163,79 @@ AD_OU_ASSIGNMENTS = (
 # membership requirements).
 # For readability, the actual assignment rules lists are seperated out.
 GRADE_PK_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade PK[3-4]$")
+    AssignmentRule("DEPARTMENT", "^Grade PK[3-4]$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_K_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade K$")
+    AssignmentRule("DEPARTMENT", "^Grade K$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_1_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 1$")
+    AssignmentRule("DEPARTMENT", "^Grade 1$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_2_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 2$")
+    AssignmentRule("DEPARTMENT", "^Grade 2$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_3_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 3$")
+    AssignmentRule("DEPARTMENT", "^Grade 3$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_4_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 4$")
+    AssignmentRule("DEPARTMENT", "^Grade 4$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_5_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 5$")
+    AssignmentRule("DEPARTMENT", "^Grade 5$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_6_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 6$")
+    AssignmentRule("DEPARTMENT", "^Grade 6$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_7_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 7$")
+    AssignmentRule("DEPARTMENT", "^Grade 7$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_8_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 8$")
+    AssignmentRule("DEPARTMENT", "^Grade 8$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_9_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 9$")
+    AssignmentRule("DEPARTMENT", "^Grade 9$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_10_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 10$")
+    AssignmentRule("DEPARTMENT", "^Grade 10$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_11_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 11$")
+    AssignmentRule("DEPARTMENT", "^Grade 11$"),
+    AssignmentRule("TITLE", "^Student$")
 )
 GRADE_12_STUDENTS_GROUP_RULES = (
-    ("DEPARTMENT", "^Grade 12$")
+    AssignmentRule("DEPARTMENT", "^Grade 12$"),
+    AssignmentRule("TITLE", "^Student$")
+)
+STUDENT_WEB_FILTERING_GROUP_RULES = (
+    AssignmentRule("TITLE", "^Student$")
 )
 
 AD_GROUP_ASSIGNMENTS = (
-    (GRADE_PK_STUDENTS_GROUP_RULES, "CN=Grade PK Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_K_STUDENTS_GROUP_RULES, "CN=Grade K Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_1_STUDENTS_GROUP_RULES, "CN=Grade 1 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_2_STUDENTS_GROUP_RULES, "CN=Grade 2 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_3_STUDENTS_GROUP_RULES, "CN=Grade 3 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_4_STUDENTS_GROUP_RULES, "CN=Grade 4 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_5_STUDENTS_GROUP_RULES, "CN=Grade 5 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_6_STUDENTS_GROUP_RULES, "CN=Grade 6 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_7_STUDENTS_GROUP_RULES, "CN=Grade 7 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_8_STUDENTS_GROUP_RULES, "CN=Grade 8 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_9_STUDENTS_GROUP_RULES, "CN=Grade 9 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_10_STUDENTS_GROUP_RULES, "CN=Grade 10 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_11_STUDENTS_GROUP_RULES, "CN=Grade 11 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED),
-    (GRADE_12_STUDENTS_GROUP_RULES, "CN=Grade 12 Students - User Group,OU=User Groups,OU=Groups,OU=CPS,DC=colchesterct,DC=org", SYNCHRONIZED)
-
+    ADGroupAssignment("CN=Grade PK Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_PK_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade K Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_K_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 1 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_1_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 2 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_2_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 3 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_3_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 4 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_4_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 5 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_5_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 6 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_6_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 7 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_7_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 8 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_8_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 9 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_9_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 10 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_10_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 11 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_11_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Grade 12 Students - User Group,OU=User Groups,OU=Groups,OU=district,DC=mydomain,DC=org", SYNCHRONIZED, MATCH_ALL_RULES, GRADE_12_STUDENTS_GROUP_RULES),
+    ADGroupAssignment("CN=Student Web Filtering - Resource Group,OU=Resource Groups,OU=Groups,OU=district,DC=mydomain,DC=org", NOT_SYNCHRONIZED, MATCH_ALL_RULES, STUDENT_WEB_FILTERING_GROUP_RULES)
 )
