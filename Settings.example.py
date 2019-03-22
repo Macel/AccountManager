@@ -3,9 +3,9 @@ Configurable settings used by sync scripts.
 """
 
 import logging
-from ADOrgUnitAssignments import ADOrgUnitAssignment
+from AccountManager_Module_AD.ADOrgUnitAssignments import ADOrgUnitAssignment
 from AttributeMapping import AttributeMapping
-from ADGroupAssignments import ADGroupAssignment
+from AccountManager_Module_AD.ADGroupAssignments import ADGroupAssignment
 from AsignmentRules import AssignmentRule
 
 # Some Constants...
