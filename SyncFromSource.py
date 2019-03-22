@@ -8,7 +8,7 @@ if __name__ == '__main__':
         IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
         AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION
     from AccountManager import AccountManager # for atom code completion
-    from ADAccountManager import ADAccountManager
+    from AccountManager_Module_AD.ADAccountManager import ADAccountManager
     from CSVPager import CSVPager
 
     ###
