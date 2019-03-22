@@ -6,8 +6,8 @@ class AssignmentRule():
         sourceColumnExpectedValueRegex is a regular expression to test for
         matching values in the source column on each user.
         """
-        self._sourceColumnName
-        self._sourceColumnExpectedValueRegex
+        self._sourceColumnName = sourceColumnName
+        self._sourceColumnExpectedValueRegex = sourceColumnExpectedValueRegex
 
     @property
     def sourceColumnName(self) -> str:

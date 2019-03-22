@@ -14,7 +14,8 @@ from abc import ABC, abstractmethod, abstractproperty
 
 class AccountManager(ABC):
 
-    def __init__(self, attributesToMap: tuple = (), maxSize: int = 500):
+    def __init__(self, dataToImport: tuple, dataColumnHeaders: dict,
+                 attributesToMap: str = (), maxSize: int = 500):
         """
         maxSize is defined as the maximum number of records this account
         manager will accept to work on.  If the import data set is larger than
@@ -66,7 +67,7 @@ class AccountManager(ABC):
         self._attributeMappings = mappings
 
     @property
-    def data(self) -> list:
+    def data(self) -> tuple:
         """
         Returns the data that this AccountManager will use to perform the sync
         process.
@@ -74,7 +75,7 @@ class AccountManager(ABC):
         return self._data
 
     @data.setter
-    def data(self, data: list):
+    def data(self, data):
         """
         importData is defined as a list of rows from an imported csv object
         that will be imported to the target database. Each item in the list is

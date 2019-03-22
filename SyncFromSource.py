@@ -6,7 +6,7 @@ if __name__ == '__main__':
         SMTP_SERVER_PORT, SMTP_SERVER_USERNAME, SMTP_FROM_ADDRESS, \
         SMTP_SERVER_PASSWORD, LOGGING_ALERTS_CONTACT, DATA_SOURCE_FILE, \
         IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
-        AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS
+        AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION
     from AccountManager import AccountManager # for atom code completion
     from ADAccountManager import ADAccountManager
     from CSVPager import CSVPager
@@ -62,6 +62,8 @@ if __name__ == '__main__':
 
         # With the current page, use ADAccountManager to sync data to AD
         adam = ADAccountManager(AD_DC, AD_USERNAME, AD_PASSWORD,
+                                currentPage,
+                                DS_COLUMN_DEFINITION,
                                 AD_OU_ASSIGNMENTS,
                                 AD_ATTRIBUTE_MAP,
                                 AD_GROUP_ASSIGNMENTS,

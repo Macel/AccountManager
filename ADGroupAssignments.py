@@ -8,7 +8,7 @@ class ADGroupAssignment():
     NOT_SYNCHRONIZED = False
 
     def __init__(self, groupDN: str, synchronized: bool, matchMethod: int,
-                 *rules: AssignmentRule):
+                 rules: AssignmentRule):
         self._groupDN = groupDN
         self._synchronized = synchronized
         self._matchMethod = matchMethod

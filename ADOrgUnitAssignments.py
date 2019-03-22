@@ -6,7 +6,7 @@ class ADOrgUnitAssignment():
     MATCH_ALL_RULES = 1
 
     def __init__(self, orgUnitDN: str, matchMethod: int,
-                 *rules: AssignmentRule):
+                 rules: AssignmentRule):
         """
         orgUnitDN: The distringuished name of the OU that matching users
         should be placed in.
@@ -37,7 +37,7 @@ class ADOrgUnitAssignment():
         if they match any one or more AssignmentRules.  Otherwise returns
         MATCH_ALL_RULES if they must match all of the rules in this assignment.
         """
-        return self._MatchMethod
+        return self._matchMethod
 
     @property
     def rules(self) -> AssignmentRule:

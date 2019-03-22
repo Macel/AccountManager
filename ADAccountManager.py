@@ -16,6 +16,8 @@ from ADGroupAssignments import ADGroupAssignment
 
 class ADAccountManager(AccountManager):
     def __init__(self, ldap_server: str, username: str, password: str,
+                 dataToImport: tuple,
+                 dataColumnHeaders: dict,
                  orgUnitAssignments: ADOrgUnitAssignment = (),
                  attributesToMap: AttributeMapping = (),
                  securityGroupAssignments: ADGroupAssignment = (),
@@ -24,17 +26,32 @@ class ADAccountManager(AccountManager):
         Takes the provided connection settings, a tuple of org unit assignment
         rules, an attribute map and a tuple of security group assignment rules
         """
-        super().__init__(maxSize, attributesToMap)
+        super().__init__(dataToImport, dataColumnHeaders, attributesToMap,
+                         maxSize)
 
         pyad_setdefaults(ldap_server=ldap_server, username=username,
                          password=password)
-        self._orgUnitAssignments = orgUnitAssignments
-        self._securityGroupAssignments = ()
+        self._orgUnitAssignments: ADOrgUnitAssignment = tuple(orgUnitAssignments)
+        self._groupAssignments: ADGroupAssignment = tuple(securityGroupAssignments)
 
     def performSync(self) -> str:
         """
         TODO: With the provided dataset, synchronizes account information to AD
         """
+        #usr = pyad.aduser.ADUser.from_cn("Robert Meany")
 
-        usr = pyad.aduser.ADUser.from_cn("Robert Meany")
-        return str(usr.adsPath)
+        # Test ADOrgUnitAssignments
+        #for assignment in self._orgUnitAssignments:
+        #    print("Org Unit DN: " + assignment.orgUnitDN)
+        #    print("Match method: " + str(assignment.matchMethod))
+        #    for rule in assignment.rules:
+        #        print(rule.sourceColumnName + ": " + rule.sourceColumnExpectedValueRegex)
+
+        # Test ADGroupAssignments
+        #for assignment in self._groupAssignments:
+        #    print("*****Group DN: " + assignment.groupDN)
+        #    print("is synchronized: " + str(assignment.synchronized))
+        #    print("match method: " + str(assignment.matchMethod))
+        #    for rule in assignment.rules:
+        #        print("rule: " + rule.sourceColumnName + ": " + rule.sourceColumnExpectedValueRegex)
+        return ""
