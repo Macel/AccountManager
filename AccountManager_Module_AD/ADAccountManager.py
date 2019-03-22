@@ -8,10 +8,10 @@ handles all sync operations for an AD domain.
 from AccountManager import AccountManager
 from pyad import pyad
 from pyad import pyad_setdefaults
-from ADOrgUnitAssignments import ADOrgUnitAssignment
+from AccountManager_Module_AD.ADOrgUnitAssignments import ADOrgUnitAssignment
 from AssignmentRules import AssignmentRule
 from AttributeMapping import AttributeMapping
-from ADGroupAssignments import ADGroupAssignment
+from AccountManager_Module_AD.ADGroupAssignments import ADGroupAssignment
 
 
 class ADAccountManager(AccountManager):
@@ -54,4 +54,11 @@ class ADAccountManager(AccountManager):
         #    print("match method: " + str(assignment.matchMethod))
         #    for rule in assignment.rules:
         #        print("rule: " + rule.sourceColumnName + ": " + rule.sourceColumnExpectedValueRegex)
+
+        # Test AttributeMappings
+        #for mapping in self._attributeMappings:
+        #    print("****Mapping:")
+        #    print("Is Synchronized: " + str(mapping.synchronized))
+        #    print(mapping.sourceColumnName + ": " + mapping.mappedAttribute)
+
         return ""
