@@ -32,12 +32,12 @@ class AccountManager(ABC):
     def performSync(self):
         pass
 
-    def dataColumns(self, columnName: str) -> int:
+    def dataColumns(self, *columnName: str) -> int:
         """
-        Returns the column number (zero-based index) of the requested column
-        name or -1 if the column name does not exist.
+        Returns the column number(s) (zero-based index) of the requested column
+        name(s) or -1 if the column name does not exist.
         """
-        return self._dataColumns.get(columnName, -1)
+        return [self._dataColumns.get(i, -1) for i in columnName]
 
     @property
     def attributeMappings(self) -> tuple:
@@ -104,8 +104,10 @@ class AccountManager(ABC):
         """
         # Ensures if only one field / format code is sent, it is still iterable
         # in a tuple.
-        fields = (fields,)
-        format = (format,)
+        if type(fields) is not tuple:
+            fields = (fields,)
+        if type(format) is not tuple:
+            format = (format,)
 
         # Remove any characters that are specified as excluded from the username
         excludeChars = tuple(excludeChars)

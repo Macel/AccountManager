@@ -6,8 +6,10 @@ if __name__ == '__main__':
         SMTP_SERVER_PORT, SMTP_SERVER_USERNAME, SMTP_FROM_ADDRESS, \
         SMTP_SERVER_PASSWORD, LOGGING_ALERTS_CONTACT, DATA_SOURCE_FILE, \
         IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
-        AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION
-    from AccountManager import AccountManager # for atom code completion
+        AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION, \
+        AD_STUDENT_USERNAME_FIELDS, AD_STUDENT_USERNAME_FORMATS, \
+        AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS
+    from AccountManager import AccountManager  # for atom code completion
     from AccountManager_Module_AD.ADAccountManager import ADAccountManager
     from CSVPager import CSVPager
 
@@ -69,7 +71,12 @@ if __name__ == '__main__':
                                 AD_GROUP_ASSIGNMENTS,
                                 IMPORT_CHUNK_SIZE)
         adam.data = currentPage
-        logger.info(adam.performSync())
+
+        for row in adam.data:
+            unflds = tuple([row[i] for i in
+                            adam.dataColumns(*AD_STUDENT_USERNAME_FIELDS)])
+            print(ADAccountManager.generateUserName(unflds,
+                                                AD_STUDENT_USERNAME_FORMATS[0]))
         if i == -1:  # End of CSV file reached
             break
 

@@ -62,14 +62,15 @@ class ADAccountManager(AccountManager):
         If the username strings contain any invalid AD characters, those
         characters will be removed *before* applying the formatting.
         """
-        return super().generateUserName(fields, format,
-                                        ADAccountManager.AD_USERNAME_INVALID_CHARS)
+        return AccountManager.generateUserName(fields, format,
+                                    ADAccountManager.AD_USERNAME_INVALID_CHARS)
 
-    def performSync(self) -> str:
+    def performSync(self):
         """
         TODO: With the provided dataset, synchronizes account information to AD
         """
-        #usr = pyad.aduser.ADUser.from_cn("Robert Meany")
+        # usr = pyad.aduser.ADUser.from_cn("Robert Meany")
+
         for usr in self._data:
-            print(usr[self.dataColumns("ID")])
-        return ""
+            # print(usr[self.dataColumns("ID")])
+            pass
