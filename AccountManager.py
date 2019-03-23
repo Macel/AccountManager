@@ -26,29 +26,18 @@ class AccountManager(ABC):
         self._data = []
         self._maxSize = maxSize
         self._attributeMappings = attributesToMap
-        self._dataColumns = {}
+        self._dataColumns = dataColumnHeaders
 
     @abstractmethod
     def performSync(self):
         pass
 
-    @property
     def dataColumns(self, columnName: str) -> int:
         """
         Returns the column number (zero-based index) of the requested column
         name or -1 if the column name does not exist.
         """
         return self._dataColumns.get(columnName, -1)
-
-    @dataColumns.setter
-    def dataColumns(self, columns: dict):
-        """
-        Sets the import data column mappings based on the provided dictionary
-        expected format is { "Column Name" : <index> } where index is the zero
-        based index of the data column assigned the column name in the import
-        data list.
-        """
-        self._dataColumns = columns
 
     @property
     def attributeMappings(self) -> tuple:
@@ -87,3 +76,57 @@ class AccountManager(ABC):
                              "size this account manager can accept.")
         else:
             self._data = data
+
+    def generateUserName(fields: str, format: str, excludeChars: str) -> str:
+        """
+        Specific implementations that inherit from AccountManager may wish
+        to override this method and automatically apply the appropriate
+        excludeChars.
+
+        fields should be a tuple of strings that will comprise the username
+        example: ("Robert","Meany","2015")
+
+        format should be a tuple of strings representing the formatting codes
+        to apply on each string in the tuple.
+        example: ("LTR:3","LTR:50","RTL:2")
+
+        "LTR:3" means to take up to the first 3 characters of the corresponding
+        field in the username tuple.  If the corresponding field is shorter
+        than 3 characters, the entire value of the first field will be included.
+
+        "RTL:2" means to take the last two characters of the corresponding
+        string in the username tuple. Again, if the corresponding string in the
+        username tuple is 0 or 1 characters in length, the entire string will be
+        included.
+
+        The above example username and format tuples would form the username:
+        RobMeany15
+        """
+        # Ensures if only one field / format code is sent, it is still iterable
+        # in a tuple.
+        fields = (fields,)
+        format = (format,)
+
+        # Remove any characters that are specified as excluded from the username
+        excludeChars = tuple(excludeChars)
+        newfields = []
+        for fld in fields:
+            for char in excludeChars:
+                fld = fld.replace(char, "")
+            newfields.append(fld)
+        fields = tuple(newfields,)
+        newfields = None
+
+        # fields = ("JeanPierre", "Gonzalez-Altimarano", "2015")
+        # format = ("LTR:1", "LTR:12", "RTL:2")
+
+        i = 0
+        result = ""
+        for itm in format:
+            a = itm.split(":")
+            if a[0] == "LTR":
+                result += fields[i][:int(a[1])]
+            elif a[0] == "RTL":
+                result += fields[i][-int(a[1]):]
+            i += 1
+        return result
