@@ -72,6 +72,8 @@ if __name__ == '__main__':
                                 IMPORT_CHUNK_SIZE)
         adam.data = currentPage
 
+        # Sync Process
+        
         for row in adam.data:
             unflds = tuple([row[i] for i in
                             adam.dataColumns(*AD_STUDENT_USERNAME_FIELDS)])
