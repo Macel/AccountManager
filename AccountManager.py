@@ -10,9 +10,14 @@ can be used to search for existing unsynchronized accounts.
 """
 
 from abc import ABC, abstractmethod, abstractproperty
+import random
 
 
 class AccountManager(ABC):
+    PASS_TYPE_WORDS = 0
+    PASS_TYPE_ALPHA = 1
+    PASS_TYPE_ALPHA_NUMERIC = 2
+    PASS_TYPE_ALPHA_SYMBOLS = 3
 
     def __init__(self, dataToImport: tuple, dataColumnHeaders: dict,
                  attributesToMap: str = (), maxSize: int = 500):
@@ -132,3 +137,54 @@ class AccountManager(ABC):
                 result += fields[i][-int(a[1]):]
             i += 1
         return result
+
+    def generatePassword(length: int, type: int,
+                         firstwords: str = None,
+                         secondwords: str = None) -> str:
+        """
+        Generate a password of the provided length and type.
+        If the password type is AccountManager.PASS_TYPE_WORDS,
+        the length is a minimum and the password may be equal to or
+        longer than the length.  The password will be comprised of two
+        random words and two numbers.
+
+        If the password type is AccountManager.PASS_TYPE_ALPHA_SYMBOLS, a
+        random string of upper and lower case letters, numbers and symbols,
+        of the exact length provided will be created.
+
+        If the password type is AccountManager.PASS_TYPE_ALPHA_NUMERIC,
+        a random string of upper and lower case letters and numbers of the
+        provided length will be created.
+
+        If the password type is AccountManager.PASS_TYPE_ALPHA, a random
+        string of upper and lower case letters of the provided length will
+        be created.
+
+        """
+        passchars = ""
+
+        if type == AccountManager.PASS_TYPE_WORDS:
+            if firstwords is None or secondwords is None:
+                raise LookupError("Must provide password lists if using "
+                                  "PASS_TYPE_WORDS")
+            pw = ""
+            while len(pw) < length:
+                pw = "" + random.choice(firstwords) \
+                        + random.choice(secondwords) \
+                        + str(random.randrange(10, 99))
+        else:
+            if type == AccountManager.PASS_TYPE_ALPHA:
+                passchars = "abcdefghijklmnopqrstuvwxyz" \
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            elif type == AccountManager.PASS_TYPE_ALPHA_NUMERIC:
+                passchars = "abcdefghijklmnopqrstuvwxyz" \
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
+                            "1234567890"
+            elif type == AccountManager.PASS_TYPE_ALPHA_SYMBOLS:
+                passchars = "abcdefghijklmnopqrstuvwxyz" \
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
+                            "1234567890" \
+                            "!@#$%^&*():;,.?/\\-=+\""
+            pw = "".join(random.sample(passchars, length))
+
+        return pw
