@@ -18,7 +18,12 @@ import ldap
 AD_USERNAME_INVALID_CHARS = "/\\[]:;|=+*?<>\"@"
 
 
-class ADAccountManagerResource():
+class GetADAccountManager():
+    """
+    Provider for ADAccountManager instances.  Used in 'with' clause, thereby
+    enforcing the closing of the LDAP connection upon exit from 'with'.
+    """
+
     def __init__(self, ldap_server: str, username: str, password: str,
                  baseUserDN: str,
                  dataToImport: tuple,
@@ -60,6 +65,7 @@ class ADAccountManagerResource():
                 self._orgUnitAssignments: ADOrgUnitAssignment = tuple(orgUnitAssignments)
                 self._groupAssignments: ADGroupAssignment = tuple(securityGroupAssignments)
 
+                #TODO: Make SSL optional / specify require cert
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
                 self._ld = ldap.initialize("ldaps://" + ldap_server)
                 self._ld.set_option(ldap.OPT_REFERRALS, 0)

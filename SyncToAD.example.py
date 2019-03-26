@@ -11,7 +11,7 @@ if __name__ == '__main__':
         AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS, AD_BASE_USER_DN
     from AccountManager import AccountManager  # for atom code completion
     from AccountManager_Module_AD.ADAccountManager import \
-        ADAccountManagerResource
+        GetADAccountManager
     from CSVPager import CSVPager
 
     ###
@@ -65,14 +65,14 @@ if __name__ == '__main__':
 
         # With the current page, use ADAccountManager to sync data to AD
         logger.info("begin accountmanager init")
-        with ADAccountManagerResource(AD_DC, AD_USERNAME, AD_PASSWORD,
-                                      AD_BASE_USER_DN,
-                                      currentPage,
-                                      DS_COLUMN_DEFINITION,
-                                      AD_OU_ASSIGNMENTS,
-                                      AD_ATTRIBUTE_MAP,
-                                      AD_GROUP_ASSIGNMENTS,
-                                      IMPORT_CHUNK_SIZE) as adam:
+        with GetADAccountManager(AD_DC, AD_USERNAME, AD_PASSWORD,
+                                 AD_BASE_USER_DN,
+                                 currentPage,
+                                 DS_COLUMN_DEFINITION,
+                                 AD_OU_ASSIGNMENTS,
+                                 AD_ATTRIBUTE_MAP,
+                                 AD_GROUP_ASSIGNMENTS,
+                                 IMPORT_CHUNK_SIZE) as adam:
             adam.data = currentPage
             logger.info("end accountmanager init")
             print(str(type(adam._adUsers)))
