@@ -33,10 +33,6 @@ class AccountManager(ABC):
         self._attributeMappings = attributesToMap
         self._dataColumns = dataColumnHeaders
 
-    @abstractmethod
-    def performSync(self):
-        pass
-
     def dataColumns(self, *columnName: str) -> int:
         """
         Returns the column number(s) (zero-based index) of the requested column

@@ -8,9 +8,10 @@ if __name__ == '__main__':
         IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
         AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION, \
         AD_STUDENT_USERNAME_FIELDS, AD_STUDENT_USERNAME_FORMATS, \
-        AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS
+        AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS, AD_BASE_USER_DN
     from AccountManager import AccountManager  # for atom code completion
-    from AccountManager_Module_AD.ADAccountManager import ADAccountManager
+    from AccountManager_Module_AD.ADAccountManager import \
+        ADAccountManagerResource
     from CSVPager import CSVPager
 
     ###
@@ -63,22 +64,39 @@ if __name__ == '__main__':
             logger.debug(str(row))
 
         # With the current page, use ADAccountManager to sync data to AD
-        adam = ADAccountManager(AD_DC, AD_USERNAME, AD_PASSWORD,
-                                currentPage,
-                                DS_COLUMN_DEFINITION,
-                                AD_OU_ASSIGNMENTS,
-                                AD_ATTRIBUTE_MAP,
-                                AD_GROUP_ASSIGNMENTS,
-                                IMPORT_CHUNK_SIZE)
-        adam.data = currentPage
+        logger.info("begin accountmanager init")
+        with ADAccountManagerResource(AD_DC, AD_USERNAME, AD_PASSWORD,
+                                      AD_BASE_USER_DN,
+                                      currentPage,
+                                      DS_COLUMN_DEFINITION,
+                                      AD_OU_ASSIGNMENTS,
+                                      AD_ATTRIBUTE_MAP,
+                                      AD_GROUP_ASSIGNMENTS,
+                                      IMPORT_CHUNK_SIZE) as adam:
+            adam.data = currentPage
+            logger.info("end accountmanager init")
+            print(str(type(adam._adUsers)))
 
-        # Sync Process
-        
-        for row in adam.data:
-            unflds = tuple([row[i] for i in
-                            adam.dataColumns(*AD_STUDENT_USERNAME_FIELDS)])
-            print(ADAccountManager.generateUserName(unflds,
-                                                AD_STUDENT_USERNAME_FORMATS[0]))
+            # Sync Process
+            # For each user in adam.data...
+                # Are they linked to a user in AD (by their provided ID)?
+                # If so,
+                    # we will check for any necessary updates*
+                # If not,
+                    # configured secondary field matches? (such as email)
+                    # secondary match found,
+                        # link the user by updating their ID in AD
+                        # we will check for any necessary updates*
+                    # No secondary match found,
+                        # User has an OU assignment rule?
+                        # If not,
+                            # don't bother creating the user and log it
+                        # If so,
+                            # create the user and apply any matching OU and group rules
+
+            for row in adam.data:
+                unflds = tuple([row[i] for i in
+                                adam.dataColumns(*AD_STUDENT_USERNAME_FIELDS)])
         if i == -1:  # End of CSV file reached
             break
 
