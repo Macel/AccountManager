@@ -6,9 +6,6 @@ handles all sync operations for an AD domain.
 """
 
 from AccountManager import AccountManager
-from pyad import pyad
-from pyad import adquery
-from pyad import pyad_setdefaults
 from AccountManager_Module_AD.ADOrgUnitAssignments import ADOrgUnitAssignment
 from AssignmentRules import AssignmentRule
 from AttributeMapping import AttributeMapping

@@ -15,14 +15,22 @@ Credit should also go to Vinay Sajip whose code I have integrated into this proj
 Requirements
 ============
 
-The current plan for ADAccountManager is use pyad, available at https://github.com/zakird/pyad
+The current plan for ADAccountManager is to use python-ldap as the connection provider.
+http://python-ldap.org/
+
+Certain Windows AD-specific functionality, such as setting the 'user cannot change password' flag, or any other ACL-based operations, cannot be implemented with
+a generic ldapv3 module.  Other workarounds may be available in such instances.  For example, instead of setting the 'user cannot change password' flag, a group policy can be applied on the users who should not be able to change password that prevents them from accessing the password reset functionality in windows.
 
 Installable via pip,
 ::
-pip install pyad
+python -m pip install python-ldap
 
-pyad requires pywin32, available at http://sourceforge.net/projects/pywin32
+If you are running this from a windows machine, I recommend downloading a precompiled 'wheel' of python-ldap as extra steps would need to be taken in a windows environment to get python-ldap to install via pip.  Unofficial win32 x86/64 wheels for python-ldap can be obtained via https://www.lfd.uci.edu/~gohlke/pythonlibs/
 
-Also installable via pip,
+in order to install the wheel file, you will need to install the wheels module for pip
 ::
-pip install pywin32
+python -m pip install wheel
+
+... And then to install the wheel file it would be something like:
+::
+python -m pip install /path/to/wheelfile.whl
