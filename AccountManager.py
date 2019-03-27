@@ -20,15 +20,28 @@ class AccountManager(ABC):
     PASS_TYPE_ALPHA_SYMBOLS = 3
 
     def __init__(self, dataToImport: tuple, dataColumnHeaders: dict,
+                 dataLinkColumnName: str, targetLinkAttribute: str,
                  attributesToMap: str = (), maxSize: int = 500):
         """
-        maxSize is defined as the maximum number of records this account
+        dataToImport: A tuple containing records of data to import
+        dataColumnHeaders: Names for the columns in dataToImport, in same order
+        as data.
+        dataLinkColumnName: The name of the column (as provided in
+        dataColumnHeaders) that contains the unique identifier to link to the
+        target database.
+        targetLinkAttribute: The name of the attribute in the target database
+        that will be linked to with the data in dataLinkColumnName.
+        attributesToMap: a tuple of data source column -to- target attribute
+        mappings.
+        maxSize: as the maximum number of records this account
         manager will accept to work on.  If the import data set is larger than
         maxSize records, a seperate instance of AccountManager will need to be
         created.
         """
         super().__init__()
         self._data = []
+        self._dataLinkColumnName = dataLinkColumnName,
+        self._targetLinkAttribute = targetLinkAttribute,
         self._maxSize = maxSize
         self._attributeMappings = attributesToMap
         self._dataColumns = dataColumnHeaders

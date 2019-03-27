@@ -22,15 +22,21 @@ Certain Windows AD-specific functionality, such as setting the 'user cannot chan
 a generic ldapv3 module.  Other workarounds may be available in such instances.  For example, instead of setting the 'user cannot change password' flag, a group policy can be applied on the users who should not be able to change password that prevents them from accessing the password reset functionality in windows.
 
 Installable via pip,
+
 ::
+
 python -m pip install python-ldap
 
 If you are running this from a windows machine, I recommend downloading a precompiled 'wheel' of python-ldap as extra steps would need to be taken in a windows environment to get python-ldap to install via pip.  Unofficial win32 x86/64 wheels for python-ldap can be obtained via https://www.lfd.uci.edu/~gohlke/pythonlibs/
 
 in order to install the wheel file, you will need to install the wheels module for pip
+
 ::
+
 python -m pip install wheel
 
 ... And then to install the wheel file it would be something like:
+
 ::
+
 python -m pip install /path/to/wheelfile.whl

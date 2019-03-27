@@ -75,7 +75,23 @@ if __name__ == '__main__':
                                  IMPORT_CHUNK_SIZE) as adam:
             adam.data = currentPage
             logger.info("end accountmanager init")
-            print(str(type(adam._adUsers)))
+
+            result = adam.getADUsersPage(["distinguishedName"])
+            aduserspage = result[0]
+            bookmark = result[1]
+
+            print("retrieved page of: " + str(len(aduserspage)) + " users.")
+            print("bookmark result: " + str(bookmark))
+            while bookmark is not None:
+                result = adam.getADUsersPage(["distinguishedName"], bookmark)
+                aduserspage = result[0]
+                bookmark = result[1]
+                print("retrieved page of: " + str(len(aduserspage)) + " users.")
+                print("bookmark result: " + str(bookmark))
+            print("End of users reached")
+
+
+            #print(str(type(adam._adUsers)))
 
             # Sync Process
             # For each user in adam.data...
