@@ -39,9 +39,9 @@ class AccountManager(ABC):
         created.
         """
         super().__init__()
-        self._data = []
-        self._dataLinkColumnName = dataLinkColumnName,
-        self._targetLinkAttribute = targetLinkAttribute,
+        self._data = dataToImport
+        self._dataLinkColumnName = dataLinkColumnName
+        self._targetLinkAttribute = targetLinkAttribute
         self._maxSize = maxSize
         self._attributeMappings = attributesToMap
         self._dataColumns = dataColumnHeaders
@@ -51,7 +51,13 @@ class AccountManager(ABC):
         Returns the column number(s) (zero-based index) of the requested column
         name(s) or -1 if the column name does not exist.
         """
-        return [self._dataColumns.get(i, -1) for i in columnName]
+
+        result = [self._dataColumns.get(i, -1) for i in columnName]
+
+        # if only one column is returned, do not encapsulate it in list.
+        if len(result) == 1:
+            result = result[0]
+        return result
 
     @property
     def attributeMappings(self) -> tuple:

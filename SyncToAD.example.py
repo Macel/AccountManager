@@ -8,7 +8,8 @@ if __name__ == '__main__':
         IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
         AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION, \
         AD_STUDENT_USERNAME_FIELDS, AD_STUDENT_USERNAME_FORMATS, \
-        AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS, AD_BASE_USER_DN
+        AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS, AD_BASE_USER_DN, \
+        DS_ACCOUNT_IDENTIFIER, TARGET_ACCOUNT_IDENTIFIER
     from AccountManager import AccountManager  # for atom code completion
     from AccountManager_Module_AD.ADAccountManager import \
         GetADAccountManager
@@ -58,10 +59,10 @@ if __name__ == '__main__':
         previ = i
         i = pager.getPage(i)
         currentPage = pager.page
-        logger.debug("Page starting at index " + str(previ)
-                     + " ending at index: " + str(i-1))
-        for row in currentPage:
-            logger.debug(str(row))
+        #logger.debug("Page starting at index " + str(previ)
+        #             + " ending at index: " + str(i-1))
+        #for row in currentPage:
+        #    logger.debug(str(row))
 
         # With the current page, use ADAccountManager to sync data to AD
         logger.info("begin accountmanager init")
@@ -69,36 +70,29 @@ if __name__ == '__main__':
                                  AD_BASE_USER_DN,
                                  currentPage,
                                  DS_COLUMN_DEFINITION,
+                                 DS_ACCOUNT_IDENTIFIER,
+                                 TARGET_ACCOUNT_IDENTIFIER,
                                  AD_OU_ASSIGNMENTS,
                                  AD_ATTRIBUTE_MAP,
                                  AD_GROUP_ASSIGNMENTS,
                                  IMPORT_CHUNK_SIZE) as adam:
-            adam.data = currentPage
             logger.info("end accountmanager init")
-
-            result = adam.getADUsersPage(["distinguishedName"])
-            aduserspage = result[0]
-            bookmark = result[1]
-
-            print("retrieved page of: " + str(len(aduserspage)) + " users.")
-            print("bookmark result: " + str(bookmark))
-            while bookmark is not None:
-                result = adam.getADUsersPage(["distinguishedName"], bookmark)
-                aduserspage = result[0]
-                bookmark = result[1]
-                print("retrieved page of: " + str(len(aduserspage)) + " users.")
-                print("bookmark result: " + str(bookmark))
-            print("End of users reached")
-
-
-            #print(str(type(adam._adUsers)))
 
             # Sync Process
             # For each user in adam.data...
+            for row in adam.data:
+
                 # Are they linked to a user in AD (by their provided ID)?
-                # If so,
+                userid = row[adam.dataColumns(DS_ACCOUNT_IDENTIFIER)]
+                fn = row[adam.dataColumns("FIRST_NAME")]
+                ln = row[adam.dataColumns("LAST_NAME")]
+
+                adusr = adam.getLinkedUserInfo(userid, ["distinguishedName"])
+                if len(adusr) > 0:  # If so,
                     # we will check for any necessary updates*
-                # If not,
+                    print(fn + " " + ln + ": " + str(adusr.get("distinguishedName")))
+                else:  # If not,
+                    print("AD user not found for: " + fn + " " + ln)
                     # configured secondary field matches? (such as email)
                     # secondary match found,
                         # link the user by updating their ID in AD
@@ -110,11 +104,11 @@ if __name__ == '__main__':
                         # If so,
                             # create the user and apply any matching OU and group rules
 
-            for row in adam.data:
-                unflds = tuple([row[i] for i in
-                                adam.dataColumns(*AD_STUDENT_USERNAME_FIELDS)])
         if i == -1:  # End of CSV file reached
             break
 
     logger.info("Sync Process has completed.")
     # End Script
+
+
+# Helper functions

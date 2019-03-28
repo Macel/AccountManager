@@ -152,22 +152,30 @@ class GetADAccountManager():
                 return (r[0], retbookmark)
 
             def getLinkedUserInfo(self, linkID: str,
-                                  attributes: str) -> str:
+                                  attributes: str) -> dict:
                 """
                 Returns a tuple of information pertaining to the user queried.
                 Searches on the provided link identifying attribute
                 (linkIDAttributeName) and value (linkID).
-                Returns the attributes specified in the attributes parameter or
+                Returns a dictionary of the attributes specified in the
+                attributes parameter, or
                 None if the linked user was not found.
                 """
                 # TODO: Test
-                search = "(" + self._targetLinkAttribute + "=" + linkID + ")"
+                search = "(" + self._targetLinkAttribute + "=" + str(linkID) + ")"
                 r = self._ld.search(self._baseUserDN,
                                     ldap.SCOPE_SUBTREE,
                                     search,
                                     attributes)
                 result_type, result_data = self._ld.result(r, 1)
-                return result_data
+
+                if len(result_data) == 0:
+                    return None
+                elif len(result_data) > 1:
+                    raise Exception("Unexpected: More than one user was "
+                                    + "returned from this unique ID search!")
+                else:
+                    return result_data[0][1]
 
             def locateUser(self, searchAttributeName: str,
                            searchAttributeValue: str) -> str:
