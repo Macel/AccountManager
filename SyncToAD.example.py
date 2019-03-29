@@ -87,12 +87,24 @@ if __name__ == '__main__':
                 fn = row[adam.dataColumns("FIRST_NAME")]
                 ln = row[adam.dataColumns("LAST_NAME")]
 
-                adusr = adam.getLinkedUserInfo(userid, ["distinguishedName"])
-                if len(adusr) > 0:  # If so,
+                adusr = adam.getLinkedUserInfo(userid,
+                                               [i.mappedAttribute
+                                                for i in AD_ATTRIBUTE_MAP])
+
+                if adusr is not None:  # If so,
                     # we will check for any necessary updates*
-                    print(fn + " " + ln + ": " + str(adusr.get("distinguishedName")))
+                    for itm in AD_ATTRIBUTE_MAP:
+                        # get the current AD attribute value
+                        adusr_attr_val = adusr.get(itm.mappedAttribute)
+                        # get the current data source attribute value
+                        ds_attr_val = row[DS_COLUMN_DEFINITION.get(itm.sourceColumnName)]
+                        print("Data Source :: " + itm.sourceColumnName + " = " + str(ds_attr_val))
+                        print("AD :: " + itm.mappedAttribute + " = " + str(adusr_attr_val))
+                    #print(fn + " " + ln + ": " + str(adusr))
+
                 else:  # If not,
-                    print("AD user not found for: " + fn + " " + ln)
+                    pass
+                    #print("AD user not found for: " + fn + " " + ln)
                     # configured secondary field matches? (such as email)
                     # secondary match found,
                         # link the user by updating their ID in AD
