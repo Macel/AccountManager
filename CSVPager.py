@@ -12,12 +12,15 @@ class CSVPager():
     FILE_TYPE_CSV = 'excel'
     FILE_TYPE_TSV = 'excel-tab'
 
-    def __init__(self, filepath: str, filetype: str, pageSize: int):
+    def __init__(self, filepath: str, filetype: str, pageSize: int,
+                 keyIndex: int = 0):
         """
         filepath is the path to the file to iterate through for pagination
         filetype is a string representing the format of the data source file
         (use CSVPager.FILE_TYPE_CSV or .FILE_TYPE_TSV)
         pageSize is the number of records that should be returned per page.
+        keyIndex is the zero-based index of the field in the file containing
+        the key for the data dictionary.
         """
         try:
             self._file = open(filepath)
@@ -26,7 +29,8 @@ class CSVPager():
             return None
         self._reader = csv.reader(self._file, filetype)
         self._pageSize: int = pageSize
-        self._page: list = []
+        self._page: dict = {}
+        self._keyIndex = keyIndex
 
         # Get the CSV file record count without storing the whole thing in
         # memory
@@ -50,16 +54,18 @@ class CSVPager():
         returns the index of the last record returned + 1.
         If less than _pageSize records are returned before reaching EOF, return
         -1 to indicate we are done paging through the csv file.
+        keyindex is the index of the field in the row that should be the key
+        for _data (which is a dict).
         """
 
         i = 0
-        p = []
+        p = {}
         retval = -1
         pageEndIndex = startIndex + self._pageSize - 1
 
         for row in self._reader:
             if i >= startIndex:
-                p.append(row)
+                p[row[self._keyIndex]] = row
             if i == self._csvRecordCount - 1:
                 retval = -1
                 break

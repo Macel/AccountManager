@@ -51,7 +51,7 @@ class GetADAccountManager():
 
             def __init__(self, ldap_server: str, username: str, password: str,
                          baseUserDN: str,
-                         dataToImport: tuple,
+                         dataToImport: dict,
                          dataColumnHeaders: dict,
                          dataLinkColumnName: str,
                          targetLinkAttribute: str,
@@ -66,7 +66,9 @@ class GetADAccountManager():
                 username: username of service account to bind with.
                 password: password of service account to bind with.
                 baseUserDN: the search base in LDAP to base user searches on.
-                dataToImport: A tuple containing rows of user data to sync.
+                dataToImport: A dict containing rows of user data to sync.
+                the dict key should be the identifer that links the data source
+                to the AD user attribute.
                 dataColumnHeaders: A tuple containing the column headers for the
                 provided data (in the same order as the data.)
                 dataLinkColumnName: The name of the column (as provided in
@@ -79,8 +81,6 @@ class GetADAccountManager():
                                  attributesToMap,
                                  maxSize)
 
-                #pyad_setdefaults(ldap_server=ldap_server, username=username,
-                #                 password=password)
                 self._orgUnitAssignments: ADOrgUnitAssignment = tuple(orgUnitAssignments)
                 self._groupAssignments: ADGroupAssignment = tuple(securityGroupAssignments)
                 self._baseUserDN = baseUserDN
@@ -114,10 +114,8 @@ class GetADAccountManager():
                                                searchString,
                                                attributes,
                                                serverctrls=[pagecontrol])
-                #print("response: " + str(response))  # debugging
 
                 rtype, rdata, rmsgid, serverctrls = self._ld.result3(response)
-                # print("rdata: " + "".join(str(rdata)))
                 controls = [control for control in serverctrls
                             if control.controlType
                             == SimplePagedResultsControl.controlType]
@@ -140,6 +138,9 @@ class GetADAccountManager():
                 If the returned bookmark value is None, this is also the last
                 page.
                 """
+                # TODO: Rename this to GetLinkedUsersPage
+                # TODO: Make an abstractmethod for this in AccountManager
+
                 if bookmark is None:
                     raise EOFError("End of user search has been reached.")
                 r = self._pagedSearch(attributes,
@@ -161,7 +162,7 @@ class GetADAccountManager():
                 attributes parameter, or
                 None if the linked user was not found.
                 """
-                # TODO: Test
+                # TODO: Make an abstractmethod for this in AccountManager
                 search = "(" + self._targetLinkAttribute + "=" + str(linkID) + ")"
                 r = self._ld.search(self._baseUserDN,
                                     ldap.SCOPE_SUBTREE,
@@ -183,6 +184,7 @@ class GetADAccountManager():
                 Searches for a user based on the specified attribute and value
                 returns the DN of any user(s) found in a tuple.
                 """
+                # TODO: Make an abstractmethod for this in AccountManager
                 # TODO: Test
                 n = ldap.filter.escape_filter_chars(searchAttributeName)
                 v = ldap.filter.escape_filter_chars(searchAttributeValue)

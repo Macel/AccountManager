@@ -19,11 +19,12 @@ class AccountManager(ABC):
     PASS_TYPE_ALPHA_NUMERIC = 2
     PASS_TYPE_ALPHA_SYMBOLS = 3
 
-    def __init__(self, dataToImport: tuple, dataColumnHeaders: dict,
+    def __init__(self, dataToImport: dict, dataColumnHeaders: dict,
                  dataLinkColumnName: str, targetLinkAttribute: str,
                  attributesToMap: str = (), maxSize: int = 500):
         """
-        dataToImport: A tuple containing records of data to import
+        dataToImport: A dict containing records of data to import with
+        the user identifier as the key.
         dataColumnHeaders: Names for the columns in dataToImport, in same order
         as data.
         dataLinkColumnName: The name of the column (as provided in
@@ -96,6 +97,18 @@ class AccountManager(ABC):
                              "size this account manager can accept.")
         else:
             self._data = data
+
+    def _getDataRow(self, rowid) -> tuple:
+        pass
+
+    @abstractmethod
+    def syncAttributes(self, dataIndex):
+        """
+        Implementation-specific AccountManagers that inherit from this class
+        should provide a method for syncing the attributes data from the source
+        to the target database.
+        """
+        pass
 
     def generateUserName(fields: str, format: str, excludeChars: str) -> str:
         """
