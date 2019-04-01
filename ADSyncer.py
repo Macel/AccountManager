@@ -1,9 +1,7 @@
 import logging
 import logging.handlers
 from BufferingSMTPHandler import BufferingSMTPHandler
-from Settings import LOGGING_LEVEL, LOGGING_PATH, SMTP_SERVER_IP, \
-    SMTP_SERVER_PORT, SMTP_SERVER_USERNAME, SMTP_FROM_ADDRESS, \
-    SMTP_SERVER_PASSWORD, LOGGING_ALERTS_CONTACT, DATA_SOURCE_FILE, \
+from Settings import DATA_SOURCE_FILE, \
     IMPORT_CHUNK_SIZE, AD_DC, AD_USERNAME, AD_PASSWORD, AD_OU_ASSIGNMENTS, \
     AD_ATTRIBUTE_MAP, AD_GROUP_ASSIGNMENTS, DS_COLUMN_DEFINITION, \
     AD_STUDENT_USERNAME_FIELDS, AD_STUDENT_USERNAME_FORMATS, \
@@ -11,25 +9,32 @@ from Settings import LOGGING_LEVEL, LOGGING_PATH, SMTP_SERVER_IP, \
     DS_ACCOUNT_IDENTIFIER, TARGET_ACCOUNT_IDENTIFIER, DATA_SOURCE_FILE_TYPE
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
-    GetADAccountManager, ADAccountManager
+    GetADAccountManager
 from CSVPager import CSVPager
 
 
-class SyncToAD():
+class ADSyncer():
     def __init__(self, logger: logging.Logger):
+        self._logger = logger
+
+    def runSyncProcess(self):
+        """
+        Initiates the sync process.
+        References the common and AD-related settings in Settings.py
+        """
         # Sync accounts on paged data.
         pager = CSVPager(DATA_SOURCE_FILE,
                          DATA_SOURCE_FILE_TYPE,
                          IMPORT_CHUNK_SIZE,
                          DS_COLUMN_DEFINITION.get(DS_ACCOUNT_IDENTIFIER))
-        logger.debug("pager total record count: " + str(pager.csvRecordCount))
+        self._logger.debug("pager total record count: " + str(pager.csvRecordCount))
         i = 0
         while True:
             # With each page of records from the CSV file, run the sync process
             i = pager.getPage(i)
             currentPage = pager.page
             # With the current page, use ADAccountManager to sync data to AD
-            logger.debug("begin accountmanager init")
+            self._logger.debug("begin accountmanager init")
             with GetADAccountManager(AD_DC, AD_USERNAME, AD_PASSWORD,
                                      AD_BASE_USER_DN,
                                      currentPage,
@@ -40,13 +45,13 @@ class SyncToAD():
                                      AD_ATTRIBUTE_MAP,
                                      AD_GROUP_ASSIGNMENTS,
                                      IMPORT_CHUNK_SIZE) as adam:
-                logger.debug("end accountmanager init")
+                self._logger.debug("end accountmanager init")
 
                 # Sync Process
                 # For each user in adam.data...
                 for rowid in adam.data:
                     # Are they linked to a user in AD (by their provided ID)?
-                    dsusr = adam.data.get(rowid)
+                    dsusr = adam.dataRow(rowid)
                     userid = dsusr[adam.dataColumns(DS_ACCOUNT_IDENTIFIER)]
                     adusr = adam.getLinkedUserInfo(userid,
                                                    [i.mappedAttribute
@@ -73,57 +78,21 @@ class SyncToAD():
 
             if i == -1:  # End of CSV file reached
                 break
-        logger.info("Sync Process has completed.")
+        self._logger.info("Sync Process has completed.")
         # End Script
 
     def _syncAttributes(self, dsUsr: tuple, adUsr: dict):
         """
-        Synchronizes the appropriate attributes from the datasource to
+        Synchronizes the appropriate attributes from the datasource to target
         """
         for itm in AD_ATTRIBUTE_MAP:
             # get the current AD attribute value
             adusr_attr_val = adUsr.get(itm.mappedAttribute)
             # get the current data source attribute value
             ds_attr_val = dsUsr[DS_COLUMN_DEFINITION.get(itm.sourceColumnName)]
-            logger.debug("Data Source :: " + itm.sourceColumnName + " = " + str(ds_attr_val))
-            logger.debug("AD :: " + itm.mappedAttribute + " = " + str(adusr_attr_val))
-
-
-if __name__ == '__main__':
-    ###
-    # Init script
-    ###
-
-    ###
-    # log configuration
-    ###
-    logger = logging.getLogger("accounts")
-    fileformatter = logging.Formatter('%(levelname)s '
-                                      '; %(asctime)s '
-                                      '; %(message)s')
-    filehandler = logging.handlers.RotatingFileHandler(
-        filename=LOGGING_PATH,
-        mode='a',
-        maxBytes=10485760,
-        backupCount=5)
-
-    emailhandler = BufferingSMTPHandler(mailhost=SMTP_SERVER_IP,
-                                        fromaddr=SMTP_FROM_ADDRESS,
-                                        toaddrs=LOGGING_ALERTS_CONTACT,
-                                        subject="SyncAccounts: Warnings or "
-                                        "Errors Generated",
-                                        mailport=SMTP_SERVER_PORT,
-                                        mailusername=SMTP_SERVER_USERNAME,
-                                        mailpassword=SMTP_SERVER_PASSWORD,
-                                        capacity=1000)
-
-    filehandler.setFormatter(fileformatter)
-    filehandler.setLevel(LOGGING_LEVEL)
-    emailhandler.setLevel(logging.WARN)
-    logger.setLevel(LOGGING_LEVEL)
-    logger.addHandler(filehandler)
-    logger.addHandler(emailhandler)
-
-    logger.info("Logging initialized")
-
-    SyncToAD()
+            self._logger.debug("Data Source :: "
+                               + itm.sourceColumnName
+                               + " = " + str(ds_attr_val))
+            self._logger.debug("AD :: "
+                               + itm.mappedAttribute
+                               + " = " + str(adusr_attr_val))

@@ -98,17 +98,12 @@ class AccountManager(ABC):
         else:
             self._data = data
 
-    def _getDataRow(self, rowid) -> tuple:
-        pass
-
-    @abstractmethod
-    def syncAttributes(self, dataIndex):
+    def dataRow(self, rowid) -> tuple:
         """
-        Implementation-specific AccountManagers that inherit from this class
-        should provide a method for syncing the attributes data from the source
-        to the target database.
+        Return a row of data with the provided record identifier key or None
+        if the row identifier does not exist in the data.
         """
-        pass
+        return self._data.get(rowid, None)
 
     def generateUserName(fields: str, format: str, excludeChars: str) -> str:
         """
