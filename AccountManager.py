@@ -116,6 +116,14 @@ class AccountManager(ABC):
         """
         pass
 
+    @abstractmethod
+    def createUser(self, userid):
+        """
+        Implementations of AccountManager should provide a method for creating
+        new user accounts in the target database.
+        """
+        pass
+
     def generateUserName(fields: str, format: str, excludeChars: str) -> str:
         """
         Specific implementations that inherit from AccountManager may wish

@@ -14,7 +14,15 @@ import ldap
 from ldap.controls import SimplePagedResultsControl
 from ldap.modlist import addModlist, modifyModlist
 
+"""
+Active Directory Attribute Constants Definitions
+"""
 AD_USERNAME_INVALID_CHARS = "/\\[]:;|=+*?<>\"@"
+UAC_OBJECT_SCRIPT = 1
+UAC_OBJECT_DISABLED = 2
+UAC_OBJECT_HOMEDIR_REQUIRED = 8
+UAC_OBJECT_LOCKOUT = 16
+UAC_OBJECT_PASSWD_NOTREQD = 32
 
 
 class GetADAccountManager():
@@ -316,24 +324,129 @@ class GetADAccountManager():
                 return AccountManager.generateUserName(fields, format,
                                                        AD_USERNAME_INVALID_CHARS)
 
-            def setAttribute(self, userid, attributeName: str,
+            def setAttribute(self, linkid: str, attributeName: str,
                              attributeValue: str):
                 """
-                Updates the provided attribute for the user in AD with the
-                provided link ID with the provided value.
+                By linkid, Updates an existing AD user's attribute with the
+                value provided. NOTE: this will *replace* whatever is in the
+                attribute with what is provided.
+
+                linkid: The unique ID that maps the datasource user to the
+                target db.
+
+                attributeName: Name of the AD attribute to update.
+
+                attributeValue: The new value for the AD attribute.
                 """
-                # TODO: Implement
-
                 # Grab the user DN
-                dn = self.getLinkedUserInfo(userid)["distinguishedName"]
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+                self._setAttribute(dn, attributeName, attributeValue)
 
-                # TODO: figure out how to create modlist in python-ldap
-                #modlist = [(ldap.MOD_DELETE, attributeName, None),
-                #           (ldap.MOD_ADD, attributeName,
-                #            [attributeValue.encode(self._targetEncoding)])]
+            def _setAttribute(self, dn: str, attributeName: str,
+                              attributeValue: str):
+                """
+                By distinguishedName, Updates an existing AD user's attribute
+                with the value provided. NOTE: this will *replace* whatever is
+                in the attribute with what is provided.
+
+                dn: the distinguishedName of the user.
+
+                attributeName: Name of the AD attribute to update.
+
+                attributeValue: The new value for the AD attribute.
+                """
+                # Create the modification list to provide to ld.modify function
                 modlist = [(ldap.MOD_REPLACE, attributeName,
                             [attributeValue.encode(self._targetEncoding)])]
+                # TODO: Error Handling
                 self._ld.modify_s(dn, modlist)
+
+            def createUser(self, linkid: str, cn: str, ou: str, sAMAccountName: str,
+                           upn: str, attributes: dict, groups: tuple):
+                """
+                Create a new AD user account and enable it.
+
+                linkid: The unique ID that maps the datasource user to the target db.
+
+                cn: common name for the new user.
+
+                ou: org unit the new user should be placed in.
+
+                samAccountName: the username for the new user
+
+                upn: the userPrincipalName (username + @domainsuffix)
+
+                attributes: dictionary of additional optional attribute names and
+                values to be set.
+
+                groups: tuple of DNs of groups this account should be made a member of.
+                """
+                # Build new dn from cn and ou
+                dn = "cn=" + cn + "," + ou
+
+                # Define the object class for a new user in AD
+                objclass = ["Top", "Person", "OrganizationalPerson", "User"]
+
+                modlist = [("distinguishedName", [dn.encode(self._targetEncoding)]),
+                           ("userPrincipalName", [upn.encode(self._targetEncoding)]),
+                           ("objectClass", [i.encode(self._targetEncoding) for i in objclass]),
+                           ("sAMAccountName", [sAMAccountName.encode(self._targetEncoding)]),
+                           (self._targetLinkAttribute, [linkid.encode(self._targetEncoding)])]
+
+                # Append attributes to the mod list.
+                for key in attributes.keys():
+                    moditm = (key, [attributes[key].encode(self._targetEncoding)])
+                    modlist.append(moditm)
+
+                # Create the user.
+                # TODO: Error Handling
+                self._ld.add_s(dn, modlist)
+                # Enable the user.
+                self._toggleUserEnabled(dn, True)
+                # Add the new user to appropriate groups
+                self._assignUserGroups(dn, groups)
+
+            def assignUserGroups(self, linkid: str, groups: tuple):
+                """
+                Add a user to AD groups by user linkid
+                linkid: the unique id that links the source user to the target.
+                groups: a tuple of Group DNs to add this user to.
+                """
+                # Get user DN
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+                self._assignUserGroups(dn, groups)
+
+            def _assignUserGroups(self, dn: str, groups: tuple):
+                """
+                Add a user to AD groups by distinguishedName
+                dn: distinguishedName of the username
+                groups: a tuple of Group DNs to add this user to.
+                """
+                # TODO: Implement
+                pass
+
+            def toggleUserEnabled(self, linkid: str, enabled: bool):
+                """
+                Enable or disable a user by linkid.
+                linkid: the unique id that links the source user to the target.
+                enabled: true if user should be enabled, false if user should be
+                disabled.
+                """
+                # TODO: Implement this as an abstractmethod in AccountManager
+                # Get the DN
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+
+                self._toggleUserEnabled(dn, enabled)
+
+            def _toggleUserEnabled(self, dn: str, enabled: bool):
+                """
+                Enable or disable a user by distinguishedName.
+                dn: distinguishedName of the user.
+                enabled: true if user should be enabled, false if user should be
+                disabled.
+                """
+                # TODO: Implement
+                pass
 
             def finalize(self):
                 # Close LDAP Connection

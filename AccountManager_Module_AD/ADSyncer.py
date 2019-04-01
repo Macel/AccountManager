@@ -63,6 +63,7 @@ class ADSyncer():
                         # Sync any updated information
                         self._logger.debug("Linked user found for id: " + userid
                                            + ".  Syncing information.")
+
                         self._syncOU(userid, dsusr, adusr)
                         self._syncActiveStatus(userid, dsusr, adusr)
                         # Don't bother syncing attributes/group membership if
