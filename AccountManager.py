@@ -105,6 +105,15 @@ class AccountManager(ABC):
         """
         return self._data.get(rowid, None)
 
+    @abstractmethod
+    def setAttribute(self, userid, attributeName: str,
+                     attributeValue: str):
+        """
+        Implementations of AccountManager should update linked user's target db
+        attribute with the provided value.
+        """
+        pass
+
     def generateUserName(fields: str, format: str, excludeChars: str) -> str:
         """
         Specific implementations that inherit from AccountManager may wish

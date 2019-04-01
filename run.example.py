@@ -1,10 +1,10 @@
 import logging
 import logging.handlers
 from BufferingSMTPHandler import BufferingSMTPHandler
-from ADSyncer import ADSyncer
+from AccountManager_Module_AD.ADSyncer import ADSyncer
 from Settings import LOGGING_LEVEL, LOGGING_PATH, SMTP_SERVER_IP, \
                      SMTP_SERVER_PORT, SMTP_SERVER_USERNAME, SMTP_FROM_ADDRESS, \
-                     SMTP_SERVER_PASSWORD, LOGGING_ALERTS_CONTACT
+                     SMTP_SERVER_PASSWORD, LOGGING_ALERTS_CONTACT, SYNC_TO_AD
 
 ###
 # Init script
@@ -42,5 +42,8 @@ if __name__ == '__main__':
 
     logger.info("Logging initialized")
 
-    adsyncer = ADSyncer(logger)
-    adsyncer.runSyncProcess()
+    if (SYNC_TO_AD):
+        adsyncer = ADSyncer(logger)
+        adsyncer.runSyncProcess()
+
+    logger.info("Finished running sync scripts.")

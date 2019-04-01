@@ -153,21 +153,22 @@ class GetADAccountManager():
                 return (r[0], retbookmark)
 
             def getLinkedUserInfo(self, linkID: str,
-                                  attributes: str) -> dict:
+                                  attributes: str = None) -> dict:
                 """
                 Returns a tuple of information pertaining to the user queried.
                 Searches on the provided link identifying attribute
                 (linkIDAttributeName) and value (linkID).
-                Returns a dictionary of the attributes specified in the
-                attributes parameter, or
-                None if the linked user was not found.
+                Returns a dictionary of the user dn and any other attributes
+                specified in the attributes parameter, or None if the linked
+                user was not found.
+                If attributes is None, it will return just the DN for the user.
                 """
                 # TODO: Make an abstractmethod for this in AccountManager
                 search = "(" + self._targetLinkAttribute + "=" + str(linkID) + ")"
                 r = self._ld.search(self._baseUserDN,
                                     ldap.SCOPE_SUBTREE,
                                     search,
-                                    attributes)
+                                    tuple(["distinguishedName"] + list(attributes)))
                 result_type, result_data = self._ld.result(r, 1)
 
                 if len(result_data) == 0:
@@ -224,6 +225,20 @@ class GetADAccountManager():
                 """
                 return AccountManager.generateUserName(fields, format,
                                                        AD_USERNAME_INVALID_CHARS)
+
+            def setAttribute(self, userid, attributeName: str,
+                             attributeValue: str):
+                """
+                Updates the provided attribute for the user in AD with the
+                provided link ID with the provided value.
+                """
+                # TODO: Implement
+
+                # Grab the user DN
+                dn = self.getLinkedUserInfo(userid)[0]
+
+                #TODO: figure out how to create modlist in python-ldap
+                self._ld.modify(dn,modlist)
 
             def finalize(self):
                 # Close LDAP Connection
