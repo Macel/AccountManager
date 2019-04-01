@@ -7,7 +7,7 @@ from Settings import DATA_SOURCE_FILE, \
     AD_STUDENT_USERNAME_FIELDS, AD_STUDENT_USERNAME_FORMATS, \
     AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS, AD_BASE_USER_DN, \
     DS_ACCOUNT_IDENTIFIER, AD_TARGET_ACCOUNT_IDENTIFIER, DATA_SOURCE_FILE_TYPE, \
-    DS_STATUS_ACTIVE_VALUE, DS_STATUS_INACTIVE_VALUE, DS_STATUS_COLUMN_NAME
+    DS_STATUS_ACTIVE_VALUES, DS_STATUS_INACTIVE_VALUES, DS_STATUS_COLUMN_NAME
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
     GetADAccountManager
@@ -45,8 +45,8 @@ class ADSyncer():
                                      AD_TARGET_ACCOUNT_IDENTIFIER,
                                      AD_OU_ASSIGNMENTS,
                                      AD_ATTRIBUTE_MAP,
-                                     AD_GROUP_ASSIGNMENTS,
-                                     IMPORT_CHUNK_SIZE) as self._adam:
+                                     securityGroupAssignments=AD_GROUP_ASSIGNMENTS,
+                                     maxSize=IMPORT_CHUNK_SIZE) as self._adam:
                 self._logger.debug("end accountmanager init")
 
                 # Begin sync process for current page of users.
@@ -56,8 +56,8 @@ class ADSyncer():
                     dsusr = self._adam.dataRow(rowid)
                     userid = dsusr[self._adam.dataColumns(DS_ACCOUNT_IDENTIFIER)]
                     adusr = self._adam.getLinkedUserInfo(userid,
-                                                         [i.mappedAttribute
-                                                          for i in AD_ATTRIBUTE_MAP])
+                                                         [atr.mappedAttribute
+                                                          for atr in AD_ATTRIBUTE_MAP])
                     # Are they linked to a user in AD (by their provided ID)?
                     if adusr is not None:  # If so,
                         # Sync any updated information
@@ -68,11 +68,15 @@ class ADSyncer():
                         # Don't bother syncing attributes/group membership if
                         # the user is not active.
                         if (dsusr[self._adam.dataColumns(DS_STATUS_COLUMN_NAME)]
-                            == DS_STATUS_ACTIVE_VALUE):
+                            in set(DS_STATUS_ACTIVE_VALUES)):
+
                             self._logger.debug(userid + " is active, syncing attributes"
                                                + " and group membership.")
                             self._syncAttributes(userid, dsusr, adusr)
                             self._syncGroupMembership(userid, dsusr, adusr)
+                        else:
+                            self._logger.debug(userid + " is not active, will not bother"
+                                               + " syncing attributes/group membership.")
 
 
                     else:  # TODO: If not,
@@ -135,7 +139,8 @@ class ADSyncer():
 
                 if ds_attr_val != adusr_attr_val:
                     self._logger.debug("Found mismatch between datasource and AD attribute: "
-                                       + itm.mappedAttribute + "DS: " + str(ds_attr_val)
-                                       + "AD: " + str(adusr_attr_val) + ". "
+                                       + itm.mappedAttribute + " DS: " + str(ds_attr_val)
+                                       + " AD: " + str(adusr_attr_val) + ". "
                                        + "Setting AD attribute to DS value.")
-                    self._adam.setAttribute(userid, itm.mappededAttribute, str(ds_attr_val))
+                    self._adam.setAttribute(userid, itm.mappedAttribute,
+                                            str(ds_attr_val))

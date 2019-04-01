@@ -21,7 +21,8 @@ class AccountManager(ABC):
 
     def __init__(self, dataToImport: dict, dataColumnHeaders: dict,
                  dataLinkColumnName: str, targetLinkAttribute: str,
-                 attributesToMap: str = (), maxSize: int = 500):
+                 attributesToMap: str = (), targetEncoding: str = None,
+                 maxSize: int = 500):
         """
         dataToImport: A dict containing records of data to import with
         the user identifier as the key.
@@ -46,6 +47,7 @@ class AccountManager(ABC):
         self._maxSize = maxSize
         self._attributeMappings = attributesToMap
         self._dataColumns = dataColumnHeaders
+        self._targetEncoding = targetEncoding
 
     def dataColumns(self, *columnName: str) -> int:
         """

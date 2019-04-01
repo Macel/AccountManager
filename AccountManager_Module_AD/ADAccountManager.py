@@ -12,6 +12,7 @@ from AttributeMapping import AttributeMapping
 from AccountManager_Module_AD.ADGroupAssignments import ADGroupAssignment
 import ldap
 from ldap.controls import SimplePagedResultsControl
+from ldap.modlist import addModlist, modifyModlist
 
 AD_USERNAME_INVALID_CHARS = "/\\[]:;|=+*?<>\"@"
 
@@ -31,7 +32,56 @@ class GetADAccountManager():
                  orgUnitAssignments: ADOrgUnitAssignment = (),
                  attributesToMap: AttributeMapping = (),
                  securityGroupAssignments: ADGroupAssignment = (),
+                 targetEncoding: str = "utf-8",
                  maxSize: int = 500):
+        """
+        Create an AD Account Manager with the provided information.
+        Parameters:
+
+        ldap_server: dns name or ip address of ldap server.
+
+        username: username of service account to bind with.
+
+        password: password of service account to bind with.
+
+        baseUserDN: the search base in LDAP to base user searches on.
+
+        dataToImport: A dict containing rows of user data to sync.
+        the dict key should be the identifer that links the data source
+        to the AD user attribute.
+
+        dataColumnHeaders: A tuple containing the column headers for the
+        provided data (in the same order as the data.)
+
+        dataLinkColumnName: The name of the column (as provided in
+        dataColumnHeaders) that is the identifier for linking user data
+        in dataToImport to AD user accounts.
+
+        targetLinkAttribute: The name of the AD attribute that holds
+        the link ID.
+
+        defaultOrgUnit: The org unit to which an account should be
+        assigned if there is no matching rule for the account in
+        orgUnitAssignments.
+
+        orgUnitAssignments: a tuple of ADOrgUnitAssignments that define
+        rules which determine which org unit a user should be a member
+        of.
+
+        attributesToMap: a tuple of AttributeMappings that will sync
+        user information from the datasource to the target db.
+
+        securityGroupAssignments: a tuple of ADGroupAssignments that
+        defines rules which determine whether the user should or should
+        not be a member of a security group in AD.
+
+        targetEncoding: the character set encoding in use by this ldap
+        provider.  AD uses utf-8 and this is the default for this value
+        if not provided.
+
+        maxSize: The maximum number of records this AccountManager will
+        accept to operate on.
+        """
         self._ldap_server = ldap_server
         self._username = username
         self._password = password
@@ -43,6 +93,7 @@ class GetADAccountManager():
         self._orgUnitAssignments = orgUnitAssignments
         self._attributesToMap = attributesToMap
         self._securityGroupAssignments = securityGroupAssignments
+        self._targetEncoding = targetEncoding
         self._maxSize = maxSize
 
     def __enter__(self):
@@ -55,30 +106,63 @@ class GetADAccountManager():
                          dataColumnHeaders: dict,
                          dataLinkColumnName: str,
                          targetLinkAttribute: str,
+                         defaultOrgUnit: str,
                          orgUnitAssignments: ADOrgUnitAssignment = (),
                          attributesToMap: AttributeMapping = (),
                          securityGroupAssignments: ADGroupAssignment = (),
+                         targetEncoding: str = "utf-8",
                          maxSize: int = 1000):
                 """
                 Create an AD Account Manager with the provided information.
                 Parameters:
+
                 ldap_server: dns name or ip address of ldap server.
+
                 username: username of service account to bind with.
+
                 password: password of service account to bind with.
+
                 baseUserDN: the search base in LDAP to base user searches on.
+
                 dataToImport: A dict containing rows of user data to sync.
                 the dict key should be the identifer that links the data source
                 to the AD user attribute.
+
                 dataColumnHeaders: A tuple containing the column headers for the
                 provided data (in the same order as the data.)
+
                 dataLinkColumnName: The name of the column (as provided in
                 dataColumnHeaders) that is the identifier for linking user data
                 in dataToImport to AD user accounts.
-                targetLinkAttribute: The name of the AD attribute
+
+                targetLinkAttribute: The name of the AD attribute that holds
+                the link ID.
+
+                defaultOrgUnit: The org unit to which an account should be
+                assigned if there is no matching rule for the account in
+                orgUnitAssignments.
+
+                orgUnitAssignments: a tuple of ADOrgUnitAssignments that define
+                rules which determine which org unit a user should be a member
+                of.
+
+                attributesToMap: a tuple of AttributeMappings that will sync
+                user information from the datasource to the target db.
+
+                securityGroupAssignments: a tuple of ADGroupAssignments that
+                defines rules which determine whether the user should or should
+                not be a member of a security group in AD.
+
+                targetEncoding: the character set encoding in use by this ldap
+                provider.  AD uses utf-8 and this is the default for this value
+                if not provided.
+
+                maxSize: The maximum number of records this AccountManager will
+                accept to operate on.
                 """
                 super().__init__(dataToImport, dataColumnHeaders,
                                  dataLinkColumnName, targetLinkAttribute,
-                                 attributesToMap,
+                                 attributesToMap, targetEncoding,
                                  maxSize)
 
                 self._orgUnitAssignments: ADOrgUnitAssignment = tuple(orgUnitAssignments)
@@ -165,6 +249,8 @@ class GetADAccountManager():
                 """
                 # TODO: Make an abstractmethod for this in AccountManager
                 search = "(" + self._targetLinkAttribute + "=" + str(linkID) + ")"
+                if attributes is None:
+                    attributes = ()
                 r = self._ld.search(self._baseUserDN,
                                     ldap.SCOPE_SUBTREE,
                                     search,
@@ -177,7 +263,11 @@ class GetADAccountManager():
                     raise Exception("Unexpected: More than one user was "
                                     + "returned from this unique ID search!")
                 else:
-                    return result_data[0][1]
+                    adusr: dict = result_data[0][1]
+                    # Convert result data from bytes to friendly strings
+                    for usr in adusr.keys():
+                        adusr[usr] = adusr[usr][0].decode(self._targetEncoding)
+                    return adusr
 
             def locateUser(self, searchAttributeName: str,
                            searchAttributeValue: str) -> str:
@@ -235,10 +325,15 @@ class GetADAccountManager():
                 # TODO: Implement
 
                 # Grab the user DN
-                dn = self.getLinkedUserInfo(userid)[0]
+                dn = self.getLinkedUserInfo(userid)["distinguishedName"]
 
-                #TODO: figure out how to create modlist in python-ldap
-                self._ld.modify(dn,modlist)
+                # TODO: figure out how to create modlist in python-ldap
+                #modlist = [(ldap.MOD_DELETE, attributeName, None),
+                #           (ldap.MOD_ADD, attributeName,
+                #            [attributeValue.encode(self._targetEncoding)])]
+                modlist = [(ldap.MOD_REPLACE, attributeName,
+                            [attributeValue.encode(self._targetEncoding)])]
+                self._ld.modify_s(dn, modlist)
 
             def finalize(self):
                 # Close LDAP Connection
@@ -252,8 +347,9 @@ class GetADAccountManager():
                                      self._targetLinkAttribute,
                                      self._orgUnitAssignments,
                                      self._attributesToMap,
-                                     self._securityGroupAssignments,
-                                     self._maxSize)
+                                     securityGroupAssignments=self._securityGroupAssignments,
+                                     targetEncoding=self._targetEncoding,
+                                     maxSize=self._maxSize)
         return self.adam
 
     def __exit__(self, exc_type, exc_value, traceback):
