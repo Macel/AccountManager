@@ -45,3 +45,18 @@ class ADOrgUnitAssignment():
         Returns a tuple of all the AssignmentRules in this ADOrgUnitAssignment
         """
         return self._rules
+
+    def ruleMatchCount(self, row: dict) -> int:
+        """
+        Takes a row of data (as a dictionary of the form <fieldname: data>)
+        and checks to see if the data in the provided fields matches the regex
+        rules in this ADOrgUnitAssignment's AssignmentRules.
+
+        Returns the number of rules that matched.
+        """
+
+        matchCount = 0
+        for rule in self._rules:
+            if rule.match(row[rule.sourceColumnName]):
+                matchCount += 1
+        return matchCount

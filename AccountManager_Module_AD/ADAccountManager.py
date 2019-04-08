@@ -245,20 +245,20 @@ class GetADAccountManager():
                 return (r[0], retbookmark)
 
             def getLinkedUserInfo(self, linkID: str,
-                                  attributes: str = None) -> dict:
+                                  *attributes: str) -> dict:
                 """
-                Returns a tuple of information pertaining to the user queried.
-                Searches on the provided link identifying attribute
-                (linkIDAttributeName) and value (linkID).
                 Returns a dictionary of the user dn and any other attributes
                 specified in the attributes parameter, or None if the linked
                 user was not found.
+
+                linkid: The unique ID that maps the datasource user to the
+                target db.
+
                 If attributes is None, it will return just the DN for the user.
                 """
                 # TODO: Make an abstractmethod for this in AccountManager
                 search = "(" + self._targetLinkAttribute + "=" + str(linkID) + ")"
-                if attributes is None:
-                    attributes = ()
+
                 r = self._ld.search(self._baseUserDN,
                                     ldap.SCOPE_SUBTREE,
                                     search,
@@ -276,6 +276,29 @@ class GetADAccountManager():
                     for usr in adusr.keys():
                         adusr[usr] = adusr[usr][0].decode(self._targetEncoding)
                     return adusr
+
+            def _getObjAttributes(self, dn: str, attributes: str) -> dict:
+                """
+                Returns the requested attributes for the specified dn as
+                a dictionary.
+                """
+                search = "(distinguishedName=" + dn + ")"
+
+                r = self._ld.search(self._baseUserDN,
+                                    ldap.SCOPE_SUBTREE,
+                                    search,
+                                    tuple(["distinguishedName"] + list(attributes)))
+                result_type, result_data = self._ld.result(r, 1)
+                if len(result_data) == 0:
+                    return None
+                elif len(result_data) > 1:
+                    raise Exception("Unexpected: More than one object was "
+                                    + "returned from this unique ID search!")
+                else:
+                    adobj: dict = result_data[0][1]
+                    for atr in adobj.keys():
+                        adobj[atr] = adobj[atr][0].decode(self._targetEncoding)
+                    return adobj
 
             def locateUser(self, searchAttributeName: str,
                            searchAttributeValue: str) -> str:
@@ -362,7 +385,7 @@ class GetADAccountManager():
                 self._ld.modify_s(dn, modlist)
 
             def createUser(self, linkid: str, cn: str, ou: str, sAMAccountName: str,
-                           upn: str, attributes: dict, groups: tuple):
+                           upn: str, attributes: dict):
                 """
                 Create a new AD user account and enable it.
 
@@ -399,12 +422,34 @@ class GetADAccountManager():
                     modlist.append(moditm)
 
                 # Create the user.
-                # TODO: Error Handling
-                self._ld.add_s(dn, modlist)
-                # Enable the user.
-                self._toggleUserEnabled(dn, True)
-                # Add the new user to appropriate groups
-                self._assignUserGroups(dn, groups)
+                try:
+                    self._ld.add_s(dn, modlist)
+                except Exception as e:
+                    raise e
+
+            def setUserOU(self, linkid: str, ou: str) -> bool:
+                """
+                Move a user to a different OU
+                linkid: the unique id that links the source user to the target.
+                ou: the DN of the org unit to move the user to.
+
+                Returns true if the user was moved, false if the user was
+                already in the OU.
+
+                Raises an exception if there was a problem moving the user.
+                """
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+                # If the user's current ou matches the target ou, don't bother
+                splitdn = dn.split(",", 1)
+                cn = splitdn[0]
+                currentou = splitdn[1]
+                if (currentou == ou):
+                    return False
+                try:
+                    self._ld.rename_s(dn, cn, ou)
+                except Exception as e:
+                    raise e
+                return True
 
             def assignUserGroups(self, linkid: str, groups: tuple):
                 """
@@ -412,41 +457,54 @@ class GetADAccountManager():
                 linkid: the unique id that links the source user to the target.
                 groups: a tuple of Group DNs to add this user to.
                 """
-                # Get user DN
-                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
-                self._assignUserGroups(dn, groups)
+                usr = self.getLinkedUserInfo(linkid, ["memberOf"])
+                # TODO: Implement.
+                return
 
-            def _assignUserGroups(self, dn: str, groups: tuple):
-                """
-                Add a user to AD groups by distinguishedName
-                dn: distinguishedName of the username
-                groups: a tuple of Group DNs to add this user to.
-                """
-                # TODO: Implement
-                pass
-
-            def toggleUserEnabled(self, linkid: str, enabled: bool):
+            def setUserEnabled(self, linkid: str, enabled: bool):
                 """
                 Enable or disable a user by linkid.
                 linkid: the unique id that links the source user to the target.
                 enabled: true if user should be enabled, false if user should be
                 disabled.
+
+                Returns True if a change was made to the status Append False if
+                the current status already matches the desired status.
                 """
                 # TODO: Implement this as an abstractmethod in AccountManager
-                # Get the DN
-                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+                if (self.userEnabled(linkid) == enabled):
+                    return False
+                else:
+                    usr = self.getLinkedUserInfo(linkid, "userAccountControl")
+                    uacval = int(usr["userAccountControl"])
+                    dn = usr["distinguishedName"]
+                    if enabled:
+                        modlist = [(ldap.MOD_REPLACE, "userAccountControl",
+                                    [str(uacval - UAC_OBJECT_DISABLED)
+                                    .encode(self._targetEncoding)])]
+                    else:
+                        modlist = [(ldap.MOD_REPLACE, "userAccountControl",
+                                    [str(uacval + UAC_OBJECT_DISABLED)
+                                    .encode(self._targetEncoding)])]
+                    try:
+                        self._ld.modify_s(dn, modlist)
+                        return True
+                    except Exception as e:
+                        raise e
 
-                self._toggleUserEnabled(dn, enabled)
-
-            def _toggleUserEnabled(self, dn: str, enabled: bool):
+            def userEnabled(self, linkid) -> bool:
                 """
-                Enable or disable a user by distinguishedName.
-                dn: distinguishedName of the user.
-                enabled: true if user should be enabled, false if user should be
-                disabled.
+                Returns true if the user is enabled or false if not.
+                linkid: the unique id that links the source user to the target.
                 """
-                # TODO: Implement
-                pass
+                # TODO: Implement this as an abstractmethod in AccountManager
+                usr = self.getLinkedUserInfo(linkid, ("userAccountControl"))
+                uacval = int(usr["userAccountControl"])
+                if ((uacval & UAC_OBJECT_DISABLED)
+                    == UAC_OBJECT_DISABLED):
+                    return False
+                else:
+                    return True
 
             def finalize(self):
                 # Close LDAP Connection

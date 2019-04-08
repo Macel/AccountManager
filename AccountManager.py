@@ -48,6 +48,7 @@ class AccountManager(ABC):
         self._attributeMappings = attributesToMap
         self._dataColumns = dataColumnHeaders
         self._targetEncoding = targetEncoding
+        self._ds_col_linkid = self._dataColumns.get(dataLinkColumnName)
 
     def dataColumns(self, *columnName: str) -> int:
         """
@@ -61,6 +62,14 @@ class AccountManager(ABC):
         if len(result) == 1:
             result = result[0]
         return result
+
+    @property
+    def DS_COL_LINKID(self) -> int:
+        """
+        Returns the index of the column in this AccountManager's datasource
+        that represents the linkid for the user accounts.
+        """
+        return self._ds_col_linkid
 
     @property
     def attributeMappings(self) -> tuple:
@@ -104,8 +113,13 @@ class AccountManager(ABC):
         """
         Return a row of data with the provided record identifier key or None
         if the row identifier does not exist in the data.
+        Row is returned as a dictionary of {"columnname": "value"}
         """
-        return self._data.get(rowid, None)
+        result = {}
+        datarow = self._data.get(rowid, [])
+        for col in self._dataColumns.keys():
+            result[col] = datarow[self._dataColumns[col]]
+        return result
 
     @abstractmethod
     def setAttribute(self, userid, attributeName: str,
