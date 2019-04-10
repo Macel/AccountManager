@@ -111,43 +111,53 @@ class ADSyncer():
         """
 
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
-        self._logger.info(linkid + ": Syncing group membership")
-        # TODO: Implement
-        pass
+
+        syncedgrps = [grp for grp in AD_GROUP_ASSIGNMENTS if grp.synchronized]
+        matchedgrps = [grp.groupDN for grp in syncedgrps if grp.match(dsusr)]
+        nomatchedgrps = [grp.groupDN for grp in syncedgrps
+                         if not grp.match(dsusr)]
+
+        # First ensure that the user is assigned to any synced groups whose
+        # rules they match.
+        # TODO: Error Handling
+        result = self._adam.assignUserGroups(linkid, *matchedgrps)
+        if len(result) > 0:
+            self._logger.info(linkid + ": was added to the following group(s): "
+                              + str(result))
+
+        # Now verify that the user is not in any synchronized groups that
+        # they do *not* match the rules for....
+        # TODO: Error Handling
+        result = self._adam.deassignUserGroups(linkid, *nomatchedgrps)
+        if len(result) > 0:
+            self._logger.info(linkid + ": was removed from the following "
+                              + "group(s): " + str(result))
 
     def _syncOU(self, dsusr: dict, adusr: dict):
         """
         Ensure that the provided user is placed into the correct OU based on
-        their membership rules.
+        their membership rules. Note that if a user matches more than one OU
+        assignment, they will get placed into the first matching org unit found.
         """
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
         self._logger.info(linkid + ": Syncing OU assignments")
+        destination_ou = None
 
         for ou in AD_OU_ASSIGNMENTS:
-            ruleMatchCount = ou.ruleMatchCount(dsusr)
-            if ou.matchMethod == ADOrgUnitAssignment.MATCH_ANY_RULE:
-                if ruleMatchCount > 0:
-                    self._logger.debug(linkid + ": Matching org unit found: "
-                                       + ou.orgUnitDN)
-                    if (self._adam.setUserOU(linkid, ou.orgUnitDN)):
-                        self._logger.info(linkid + ": Moved to " + ou.orgUnitDN)
-                    return
-            elif ou.matchMethod == ADOrgUnitAssignment.MATCH_ALL_RULES:
-                if ruleMatchCount == len(ou.rules):
-                    self._logger.debug(linkid + ": Matching org unit found: "
-                                       + ou.orgUnitDN)
-                    if (self._adam.setUserOU(linkid, ou.orgUnitDN)):
-                        self._logger.info(linkid + ": Moved to " + ou.orgUnitDN)
-                    return
-
-        # It appears there were no OU matches for this user.  Set their OU to
-        # the default OU specified in settings.
-        self._logger.debug(linkid + ": No OU assignments found. Assigning "
-                           + "default OU.")
-        if (self._adam.setUserOU(linkid, AD_DEFAULT_USER_OU)):
-            self._logger.info(linkid + ": No longer matches any OU Assignments."
-                              + " User moved to default OU ("
-                              + AD_DEFAULT_USER_OU + ")")
+            if ou.match(dsusr):
+                self._logger.debug(linkid + ": Matching org unit found: "
+                                   + ou.orgUnitDN)
+                destination_ou = ou.orgUnitDN
+                break
+        if destination_ou is None:
+            # It appears there were no OU matches for this user.  Set their OU to
+            # the default OU specified in settings.
+            destination_ou = AD_DEFAULT_USER_OU
+            self._logger.debug(linkid + ": No OU assignments found. Assigning "
+                               + "default OU.")
+        # TODO: Error Handling
+        if (self._adam.setUserOU(linkid, destination_ou)):
+            self._logger.info(linkid + ": Moved to " + destination_ou)
 
     def _syncActiveStatus(self, dsusr: dict, adusr: dict):
         """
@@ -165,6 +175,8 @@ class ADSyncer():
         """
         Synchronizes the mapped attributes (marked to be synchronized)
         from the datasource to target.
+
+        Note: synced attributes are assumed to be single-valued
         """
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
         self._logger.info(linkid + ": Syncing Attributes")
@@ -174,7 +186,7 @@ class ADSyncer():
                 # get the current data source attribute value
                 ds_attr_val = dsusr[itm.sourceColumnName]
                 # get the current AD attribute value
-                adusr_attr_val = adusr[itm.mappedAttribute]
+                adusr_attr_val = adusr[itm.mappedAttribute][0]
 
                 if ds_attr_val != adusr_attr_val:
                     self._logger.debug("Found mismatch between datasource and AD attribute: "

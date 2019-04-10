@@ -47,3 +47,38 @@ class ADGroupAssignment():
         requirements for user membership in this group assignment.
         """
         return self._rules
+
+    def match(self, row: dict) -> bool:
+        """
+        Determines if the provided user information (as a dictionary of the
+        form <fieldname: data>) matches the rules for membership in this Group.
+
+        Looks at whether or not all rules must be a match or if any rule match
+        qualifies for membership and returns true if the user should be
+        assigned to this Group.
+        """
+        if self._matchMethod == self.MATCH_ALL_RULES:
+            if self._ruleMatchCount(row) == len(self._rules):
+                return True
+            else:
+                return False
+        else:
+            if self._ruleMatchCount(row) > 0:
+                return True
+            else:
+                return False
+
+    def _ruleMatchCount(self, row: dict) -> int:
+        """
+        Takes a row of data (as a dictionary of the form <fieldname: data>)
+        and checks to see if the data in the provided fields matches the regex
+        rules in this ADGroupAssignment's AssignmentRules.
+
+        Returns the number of rules that matched.
+        """
+
+        matchCount = 0
+        for rule in self._rules:
+            if rule.match(row[rule.sourceColumnName]):
+                matchCount += 1
+        return matchCount

@@ -46,7 +46,27 @@ class ADOrgUnitAssignment():
         """
         return self._rules
 
-    def ruleMatchCount(self, row: dict) -> int:
+    def match(self, row: dict) -> bool:
+        """
+        Determines if the provided user information (as a dictionary of the
+        form <fieldname: data>) matches the rules for membership in this OU.
+
+        Looks at whether or not all rules must be a match or if any rule match
+        qualifies for membership and returns true if the user should be
+        assigned to this OU.
+        """
+        if self._matchMethod == self.MATCH_ALL_RULES:
+            if self._ruleMatchCount(row) == len(self._rules):
+                return True
+            else:
+                return False
+        else:
+            if self._ruleMatchCount(row) > 0:
+                return True
+            else:
+                return False
+
+    def _ruleMatchCount(self, row: dict) -> int:
         """
         Takes a row of data (as a dictionary of the form <fieldname: data>)
         and checks to see if the data in the provided fields matches the regex

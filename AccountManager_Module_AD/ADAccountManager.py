@@ -272,10 +272,12 @@ class GetADAccountManager():
                                     + "returned from this unique ID search!")
                 else:
                     adusr: dict = result_data[0][1]
+                    retval = {}
                     # Convert result data from bytes to friendly strings
-                    for usr in adusr.keys():
-                        adusr[usr] = adusr[usr][0].decode(self._targetEncoding)
-                    return adusr
+                    for attribute in adusr.keys():
+                        retval[attribute] = [val.decode(self._targetEncoding)
+                                             for val in adusr[attribute]]
+                    return retval
 
             def _getObjAttributes(self, dn: str, attributes: str) -> dict:
                 """
@@ -296,9 +298,11 @@ class GetADAccountManager():
                                     + "returned from this unique ID search!")
                 else:
                     adobj: dict = result_data[0][1]
-                    for atr in adobj.keys():
-                        adobj[atr] = adobj[atr][0].decode(self._targetEncoding)
-                    return adobj
+                    retval = {}
+                    for attribute in adobj.keys():
+                        retval[attribute] = [val.decode(self._targetEncoding)
+                                             for val in adobj[attribute]]
+                    return retval
 
             def locateUser(self, searchAttributeName: str,
                            searchAttributeValue: str) -> str:
@@ -362,7 +366,7 @@ class GetADAccountManager():
                 attributeValue: The new value for the AD attribute.
                 """
                 # Grab the user DN
-                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
                 self._setAttribute(dn, attributeName, attributeValue)
 
             def _setAttribute(self, dn: str, attributeName: str,
@@ -438,7 +442,7 @@ class GetADAccountManager():
 
                 Raises an exception if there was a problem moving the user.
                 """
-                dn = self.getLinkedUserInfo(linkid)["distinguishedName"]
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
                 # If the user's current ou matches the target ou, don't bother
                 splitdn = dn.split(",", 1)
                 cn = splitdn[0]
@@ -451,15 +455,53 @@ class GetADAccountManager():
                     raise e
                 return True
 
-            def assignUserGroups(self, linkid: str, groups: tuple):
+            def assignUserGroups(self, linkid: str, *groups: str) -> tuple:
                 """
                 Add a user to AD groups by user linkid
                 linkid: the unique id that links the source user to the target.
-                groups: a tuple of Group DNs to add this user to.
+                groups: one or more Group DNs to add this user to.
+                Ignores any provided groups that the user is already a member of.
+
+                Returns a tuple of DNs for groups that the user was not in and
+                has been added to.
                 """
-                usr = self.getLinkedUserInfo(linkid, ["memberOf"])
-                # TODO: Implement.
-                return
+                adusr = self.getLinkedUserInfo(linkid, "memberOf")
+                adgrps = adusr["memberOf"]
+                dn = adusr["distinguishedName"][0]
+
+                # don't bother trying to add user to group they are already
+                # a member of.
+                grps_to_assign = [grp for grp in groups if grp not in adgrps]
+                modlist = [(ldap.MOD_ADD, "member",
+                            [dn.encode(self._targetEncoding)])]
+                for grp in grps_to_assign:
+                    # TODO: Error Handling
+                    self._ld.modify_s(grp, modlist)
+                return tuple(grps_to_assign)
+
+            def deassignUserGroups(self, linkid: str, *groups: str) -> tuple:
+                """
+                Remove a user from AD groups by user linkid.
+                Ignores any provided groups that the user is not currently
+                a member of.
+                linkid: the unique id that links the source user to the target.
+                groups: one or more Group DNs to remove this user from.
+
+                Returns a tuple of DNs for groups that the user was in and
+                has been removed from.
+                """
+
+                adusr = self.getLinkedUserInfo(linkid, "memberOf")
+                adgrps = adusr["memberOf"]
+                dn = adusr["distinguishedName"][0]
+
+                grps_to_remove = [grp for grp in groups if grp in adgrps]
+                modlist = [(ldap.MOD_DELETE, "member",
+                            [dn.encode(self._targetEncoding)])]
+                for grp in grps_to_remove:
+                    # TODO: Error Handling
+                    self._ld.modify_s(grp, modlist)
+                return tuple(grps_to_remove)
 
             def setUserEnabled(self, linkid: str, enabled: bool):
                 """
@@ -476,8 +518,8 @@ class GetADAccountManager():
                     return False
                 else:
                     usr = self.getLinkedUserInfo(linkid, "userAccountControl")
-                    uacval = int(usr["userAccountControl"])
-                    dn = usr["distinguishedName"]
+                    uacval = int(usr["userAccountControl"][0])
+                    dn = usr["distinguishedName"][0]
                     if enabled:
                         modlist = [(ldap.MOD_REPLACE, "userAccountControl",
                                     [str(uacval - UAC_OBJECT_DISABLED)
@@ -499,7 +541,7 @@ class GetADAccountManager():
                 """
                 # TODO: Implement this as an abstractmethod in AccountManager
                 usr = self.getLinkedUserInfo(linkid, ("userAccountControl"))
-                uacval = int(usr["userAccountControl"])
+                uacval = int(usr["userAccountControl"][0])
                 if ((uacval & UAC_OBJECT_DISABLED)
                     == UAC_OBJECT_DISABLED):
                     return False
