@@ -13,6 +13,7 @@ from AccountManager_Module_AD.ADGroupAssignments import ADGroupAssignment
 import ldap
 from ldap.controls import SimplePagedResultsControl
 from ldap.modlist import addModlist, modifyModlist
+from ldap.filter import escape_filter_chars
 
 """
 Active Directory Attribute Constants Definitions
@@ -37,6 +38,7 @@ class GetADAccountManager():
                  dataColumnHeaders: dict,
                  dataLinkColumnName: str,
                  targetLinkAttribute: str,
+                 secondaryMatchAttribute: str,
                  orgUnitAssignments: ADOrgUnitAssignment = (),
                  attributesToMap: AttributeMapping = (),
                  securityGroupAssignments: ADGroupAssignment = (),
@@ -68,6 +70,10 @@ class GetADAccountManager():
         targetLinkAttribute: The name of the AD attribute that holds
         the link ID.
 
+        secondaryMatchAttribute: The name of the AD attribute that can be
+        matched against to link a user if they are not already linked.  Should
+        be an attribute that is guaranteed to be unique forest-wide.
+
         defaultOrgUnit: The org unit to which an account should be
         assigned if there is no matching rule for the account in
         orgUnitAssignments.
@@ -98,6 +104,7 @@ class GetADAccountManager():
         self._dataColumnHeaders = dataColumnHeaders
         self._dataLinkColumn = dataLinkColumnName
         self._targetLinkAttribute = targetLinkAttribute
+        self._secondaryMatchAttribute = secondaryMatchAttribute
         self._orgUnitAssignments = orgUnitAssignments
         self._attributesToMap = attributesToMap
         self._securityGroupAssignments = securityGroupAssignments
@@ -114,6 +121,7 @@ class GetADAccountManager():
                          dataColumnHeaders: dict,
                          dataLinkColumnName: str,
                          targetLinkAttribute: str,
+                         secondaryMatchAttribute: str,
                          defaultOrgUnit: str,
                          orgUnitAssignments: ADOrgUnitAssignment = (),
                          attributesToMap: AttributeMapping = (),
@@ -170,8 +178,8 @@ class GetADAccountManager():
                 """
                 super().__init__(dataToImport, dataColumnHeaders,
                                  dataLinkColumnName, targetLinkAttribute,
-                                 attributesToMap, targetEncoding,
-                                 maxSize)
+                                 secondaryMatchAttribute, attributesToMap,
+                                 targetEncoding, maxSize)
 
                 self._orgUnitAssignments: ADOrgUnitAssignment = tuple(orgUnitAssignments)
                 self._groupAssignments: ADGroupAssignment = tuple(securityGroupAssignments)
@@ -247,37 +255,19 @@ class GetADAccountManager():
             def getLinkedUserInfo(self, linkID: str,
                                   *attributes: str) -> dict:
                 """
-                Returns a dictionary of the user dn and any other attributes
-                specified in the attributes parameter, or None if the linked
-                user was not found.
+                Gets a user by linkID and returns the requested attributes, if found.
+                Returns an empty dictionary if no user found.
 
-                linkid: The unique ID that maps the datasource user to the
-                target db.
-
-                If attributes is None, it will return just the DN for the user.
+                searchAttributeName: The name of the AD attribute to search on
+                searchAttributeValue: The value to look for in the search attribute.
+                attributes: 1 or more attributes that should be returned as a
+                dictionary of the form {attribute name: value} if a matching
+                user was found.  If attributes is None, just the DN of the discovered
+                user will be returned.
                 """
                 # TODO: Make an abstractmethod for this in AccountManager
-                search = "(" + self._targetLinkAttribute + "=" + str(linkID) + ")"
-
-                r = self._ld.search(self._baseUserDN,
-                                    ldap.SCOPE_SUBTREE,
-                                    search,
-                                    tuple(["distinguishedName"] + list(attributes)))
-                result_type, result_data = self._ld.result(r, 1)
-
-                if len(result_data) == 0:
-                    return None
-                elif len(result_data) > 1:
-                    raise Exception("Unexpected: More than one user was "
-                                    + "returned from this unique ID search!")
-                else:
-                    adusr: dict = result_data[0][1]
-                    retval = {}
-                    # Convert result data from bytes to friendly strings
-                    for attribute in adusr.keys():
-                        retval[attribute] = [val.decode(self._targetEncoding)
-                                             for val in adusr[attribute]]
-                    return retval
+                # TODO: Error Handling
+                return self.getUserInfo(self._targetLinkAttribute, linkID, *attributes)
 
             def _getObjAttributes(self, dn: str, attributes: str) -> dict:
                 """
@@ -304,23 +294,51 @@ class GetADAccountManager():
                                              for val in adobj[attribute]]
                     return retval
 
-            def locateUser(self, searchAttributeName: str,
-                           searchAttributeValue: str) -> str:
+            def getUserInfo(self, searchAttributeName: str,
+                            searchAttributeValue: str, *attributes: str) -> dict:
                 """
-                Searches for a user based on the specified attribute and value
-                returns the DN of any user(s) found in a tuple.
+                Searches for a user and returns the requested attributes, if found.
+                Returns an empty dictionary if no user found.
+
+                searchAttributeName: The name of the AD attribute to search on
+                searchAttributeValue: The value to look for in the search attribute.
+                attributes: 1 or more attributes that should be returned as a
+                dictionary of the form {attribute name: value} if a matching
+                user was found.  If attributes is None, just the DN of the discovered
+                user will be returned.
                 """
                 # TODO: Make an abstractmethod for this in AccountManager
-                # TODO: Test
-                n = ldap.filter.escape_filter_chars(searchAttributeName)
-                v = ldap.filter.escape_filter_chars(searchAttributeValue)
-                search = "(" + n + "=" + v + ")"
+                searchAttributeName = escape_filter_chars(searchAttributeName)
+                searchAttributeValue = escape_filter_chars(searchAttributeValue)
+                search = "(" + searchAttributeName + "=" + searchAttributeValue + ")"
+                # TODO: Error Handling
                 r = self._ld.search(self._baseUserDN,
                                     ldap.SCOPE_SUBTREE,
                                     search,
-                                    ["distinguishedName"])
+                                    tuple(["distinguishedName"] + list(attributes)))
                 result_type, result_data = self._ld.result(r, 1)
-                return result_data
+
+                if len(result_data) == 0:
+                    return None
+                elif len(result_data) > 1:
+                    raise Exception("Unexpected: More than one user was "
+                                    + "returned from this unique ID search!")
+                else:
+                    adusr: dict = result_data[0][1]
+                    retval = {}
+                    # Convert result data from bytes to friendly strings
+                    for attribute in adusr.keys():
+                        retval[attribute] = [val.decode(self._targetEncoding)
+                                             for val in adusr[attribute]]
+                    # The ldap interface does not return an empty/null attribute
+                    # in its result data.  We should find any non-returned
+                    # attributes and return them as null here so key Errors
+                    # do not get raised unexpectedly.
+                    nullatrs = [atr for atr in attributes
+                                if atr not in adusr.keys()]
+                    for atr in nullatrs:
+                        retval[atr] = None
+                    return retval
 
             def generateUserName(fields: str, format: str):
                 """
@@ -354,24 +372,6 @@ class GetADAccountManager():
             def setAttribute(self, linkid: str, attributeName: str,
                              attributeValue: str):
                 """
-                By linkid, Updates an existing AD user's attribute with the
-                value provided. NOTE: this will *replace* whatever is in the
-                attribute with what is provided.
-
-                linkid: The unique ID that maps the datasource user to the
-                target db.
-
-                attributeName: Name of the AD attribute to update.
-
-                attributeValue: The new value for the AD attribute.
-                """
-                # Grab the user DN
-                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
-                self._setAttribute(dn, attributeName, attributeValue)
-
-            def _setAttribute(self, dn: str, attributeName: str,
-                              attributeValue: str):
-                """
                 By distinguishedName, Updates an existing AD user's attribute
                 with the value provided. NOTE: this will *replace* whatever is
                 in the attribute with what is provided.
@@ -382,9 +382,31 @@ class GetADAccountManager():
 
                 attributeValue: The new value for the AD attribute.
                 """
-                # Create the modification list to provide to ld.modify function
+
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
                 modlist = [(ldap.MOD_REPLACE, attributeName,
                             [attributeValue.encode(self._targetEncoding)])]
+                # TODO: Error Handling
+                self._ld.modify_s(dn, modlist)
+
+            def linkUser(self, secondaryMatchVal: str, linkid: str):
+                """
+                Links the the target database user with the datasource on
+                the provided value.  References the defined secondaryMatchAttribute
+                (when this object was instantiated) for the name of the attribute that
+                should be searched to find the user to link.
+
+                secondaryMatchVal: the value of the AD secondary match field.
+
+                linkid: the id that should link the datasource record to the target user.
+                """
+                searchattr = escape_filter_chars(self._secondaryMatchAttribute)
+                searchval = escape_filter_chars(secondaryMatchVal)
+                linkattr = escape_filter_chars(self._targetLinkAttribute)
+                linkid = escape_filter_chars(linkid)
+                dn = self.getUserInfo(searchattr, searchval)["distinguishedName"][0]
+                modlist = [(ldap.MOD_REPLACE, linkattr,
+                            [linkid.encode(self._targetEncoding)])]
                 # TODO: Error Handling
                 self._ld.modify_s(dn, modlist)
 
@@ -471,7 +493,11 @@ class GetADAccountManager():
 
                 # don't bother trying to add user to group they are already
                 # a member of.
-                grps_to_assign = [grp for grp in groups if grp not in adgrps]
+                if adgrps is not None:
+                    grps_to_assign = [grp for grp in groups if grp not in adgrps]
+                else:
+                    grps_to_assign = [grp for grp in groups]
+
                 modlist = [(ldap.MOD_ADD, "member",
                             [dn.encode(self._targetEncoding)])]
                 for grp in grps_to_assign:
@@ -510,7 +536,7 @@ class GetADAccountManager():
                 enabled: true if user should be enabled, false if user should be
                 disabled.
 
-                Returns True if a change was made to the status Append False if
+                Returns True if a change was made to the status and False if
                 the current status already matches the desired status.
                 """
                 # TODO: Implement this as an abstractmethod in AccountManager
@@ -558,6 +584,7 @@ class GetADAccountManager():
                                      self._dataColumnHeaders,
                                      self._dataLinkColumn,
                                      self._targetLinkAttribute,
+                                     self._secondaryMatchAttribute,
                                      self._orgUnitAssignments,
                                      self._attributesToMap,
                                      securityGroupAssignments=self._securityGroupAssignments,

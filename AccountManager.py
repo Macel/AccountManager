@@ -21,20 +21,29 @@ class AccountManager(ABC):
 
     def __init__(self, dataToImport: dict, dataColumnHeaders: dict,
                  dataLinkColumnName: str, targetLinkAttribute: str,
+                 secondaryMatchAttribute: str,
                  attributesToMap: str = (), targetEncoding: str = None,
                  maxSize: int = 500):
         """
         dataToImport: A dict containing records of data to import with
         the user identifier as the key.
+
         dataColumnHeaders: Names for the columns in dataToImport, in same order
         as data.
+
         dataLinkColumnName: The name of the column (as provided in
         dataColumnHeaders) that contains the unique identifier to link to the
         target database.
+
         targetLinkAttribute: The name of the attribute in the target database
         that will be linked to with the data in dataLinkColumnName.
         attributesToMap: a tuple of data source column -to- target attribute
         mappings.
+
+        secondaryMatchAttribute: The name of the target DB attribute that can be
+        matched against to link a user if they are not already linked.  Should
+        be an attribute that is guaranteed to be unique in the target DB.
+
         maxSize: as the maximum number of records this account
         manager will accept to work on.  If the import data set is larger than
         maxSize records, a seperate instance of AccountManager will need to be
@@ -44,6 +53,7 @@ class AccountManager(ABC):
         self._data = dataToImport
         self._dataLinkColumnName = dataLinkColumnName
         self._targetLinkAttribute = targetLinkAttribute
+        self._secondaryMatchAttribute = secondaryMatchAttribute
         self._maxSize = maxSize
         self._attributeMappings = attributesToMap
         self._dataColumns = dataColumnHeaders
@@ -118,8 +128,25 @@ class AccountManager(ABC):
         result = {}
         datarow = self._data.get(rowid, [])
         for col in self._dataColumns.keys():
-            result[col] = datarow[self._dataColumns[col]]
+            try:
+                result[col] = datarow[self._dataColumns[col]]
+            except IndexError as e:
+                print(e)
         return result
+
+    @abstractmethod
+    def linkUser(self, secondaryMatchVal: str, linkid: str):
+        """
+        Links the the target database user with the datasource on
+        the provided value.  References the defined secondaryMatchAttribute
+        (when this object was instantiated) for the name of the attribute that
+        should be searched to find the user to link.
+
+        secondaryMatchVal: the value of the target database secondary match field.
+
+        linkid: the id that should link the datasource record to the target user.
+        """
+        pass
 
     @abstractmethod
     def setAttribute(self, userid, attributeName: str,

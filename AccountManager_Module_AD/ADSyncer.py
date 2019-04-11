@@ -8,7 +8,7 @@ from Settings import DATA_SOURCE_FILE, \
     AD_STAFF_USERNAME_FIELDS, AD_STAFF_USERNAME_FORMATS, AD_BASE_USER_DN, \
     DS_ACCOUNT_IDENTIFIER, AD_TARGET_ACCOUNT_IDENTIFIER, DATA_SOURCE_FILE_TYPE, \
     DS_STATUS_ACTIVE_VALUES, DS_STATUS_INACTIVE_VALUES, DS_STATUS_COLUMN_NAME, \
-    AD_DEFAULT_USER_OU
+    AD_DEFAULT_USER_OU, DS_SECONDARY_MATCH_COLUMN, AD_SECONDARY_MATCH_ATTRIBUTE
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
     GetADAccountManager
@@ -17,6 +17,7 @@ from CSVPager import CSVPager
 
 
 class ADSyncer():
+    # TODO: Make this an implementation of abstract class, AccountSyncer
     def __init__(self, logger: logging.Logger):
         self._logger = logger
 
@@ -45,6 +46,7 @@ class ADSyncer():
                                      DS_COLUMN_DEFINITION,
                                      DS_ACCOUNT_IDENTIFIER,
                                      AD_TARGET_ACCOUNT_IDENTIFIER,
+                                     AD_SECONDARY_MATCH_ATTRIBUTE,
                                      AD_OU_ASSIGNMENTS,
                                      AD_ATTRIBUTE_MAP,
                                      securityGroupAssignments=AD_GROUP_ASSIGNMENTS,
@@ -85,14 +87,54 @@ class ADSyncer():
                         # the OU information in adusr will become invalid.
                         self._logger.debug(linkid + ": Syncing OU.")
                         self._syncOU(dsusr, adusr)
-                    else:  # TODO: If not,
-                        pass
-                        #print("AD user not found for: " + fn + " " + ln)
-                        # configured secondary field matches? (such as email)
-                        # secondary match found,
+                    else:  # Linked user not found...
+                        # See if a user exists with a match in the secondary field.
+                        if (dsusr[DS_SECONDARY_MATCH_COLUMN] is not None
+                            and len(dsusr[DS_SECONDARY_MATCH_COLUMN])) > 0:
+                            # Don't match on an empty secondary field.
+                            adusr = self._adam.getUserInfo(AD_SECONDARY_MATCH_ATTRIBUTE,
+                                                           dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                           *[atr.mappedAttribute
+                                                             for atr in AD_ATTRIBUTE_MAP])
+                        else:
+                            adusr = None
+
+                        if adusr is not None:
+                            # Secondary match found,
                             # link the user by updating their ID in AD
                             # we will check for any necessary updates*
-                        # No secondary match found,
+                            # Sync any updated information
+                            self._logger.debug("Secondary match found for '"
+                                               + AD_SECONDARY_MATCH_ATTRIBUTE
+                                               + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
+                                               + ".  Linking user and syncing information.")
+
+                            # TODO: Error Handling
+                            self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                linkid)
+                            self._logger.info(linkid + ": An unlinked AD user has been found with"
+                                              + " a matching secondary attribute and linked.")
+                            # Don't bother syncing attributes/group membership if
+                            # the user is not active.
+                            if (dsusr[DS_STATUS_COLUMN_NAME]
+                                in set(DS_STATUS_ACTIVE_VALUES)):
+                                self._logger.debug(linkid + " is active, syncing attributes"
+                                                   + " and group membership.")
+                                self._syncAttributes(dsusr, adusr)
+                                self._syncGroupMembership(dsusr, adusr)
+                            else:
+                                self._logger.debug(linkid + " is not active, will not bother"
+                                                   + " syncing attributes/group membership.")
+
+                            self._logger.debug(linkid + ": Syncing active status.")
+                            self._syncActiveStatus(dsusr, adusr)
+                            # Sync the OU last because if a user's OU changes,
+                            # the OU information in adusr will become invalid.
+                            self._logger.debug(linkid + ": Syncing OU.")
+                            self._syncOU(dsusr, adusr)
+                        else:
+                            pass
+                            # No secondary match found,
                             # User has an OU assignment rule?
                             # If not,
                                 # don't bother creating the user and log it
@@ -111,7 +153,6 @@ class ADSyncer():
         """
 
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
-
         syncedgrps = [grp for grp in AD_GROUP_ASSIGNMENTS if grp.synchronized]
         matchedgrps = [grp.groupDN for grp in syncedgrps if grp.match(dsusr)]
         nomatchedgrps = [grp.groupDN for grp in syncedgrps
@@ -140,7 +181,6 @@ class ADSyncer():
         assignment, they will get placed into the first matching org unit found.
         """
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
-        self._logger.info(linkid + ": Syncing OU assignments")
         destination_ou = None
 
         for ou in AD_OU_ASSIGNMENTS:
@@ -167,9 +207,11 @@ class ADSyncer():
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
         status = dsusr[DS_STATUS_COLUMN_NAME]
         if status in DS_STATUS_ACTIVE_VALUES:
-            self._adam.setUserEnabled(linkid, True)
+            if (self._adam.setUserEnabled(linkid, True)):
+                self._logger.info(linkid + ": Has been re-enabled.")
         else:
-            self._adam.setUserEnabled(linkid, False)
+            if (self._adam.setUserEnabled(linkid, False)):
+                self._logger.info(linkid + ": Has been disabled.")
 
     def _syncAttributes(self, dsusr: dict, adusr: dict):
         """
@@ -179,18 +221,20 @@ class ADSyncer():
         Note: synced attributes are assumed to be single-valued
         """
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
-        self._logger.info(linkid + ": Syncing Attributes")
         for itm in AD_ATTRIBUTE_MAP:
             # If the item is intended to be kept synchronized,
             if (itm.synchronized):
                 # get the current data source attribute value
                 ds_attr_val = dsusr[itm.sourceColumnName]
                 # get the current AD attribute value
-                adusr_attr_val = adusr[itm.mappedAttribute][0]
+                if not adusr[itm.mappedAttribute] is None:
+                    adusr_attr_val = adusr[itm.mappedAttribute][0]
+                else:
+                    adusr_attr_val = None
 
                 if ds_attr_val != adusr_attr_val:
-                    self._logger.debug("Found mismatch between datasource and AD attribute: "
-                                       + itm.mappedAttribute + " DS: " + str(ds_attr_val)
+                    self._logger.info(linkid + ": AD attribute mismatch for '"
+                                       + itm.mappedAttribute + "', DS: " + str(ds_attr_val)
                                        + " AD: " + str(adusr_attr_val) + ". "
                                        + "Setting AD attribute to DS value.")
                     self._adam.setAttribute(linkid, itm.mappedAttribute,
