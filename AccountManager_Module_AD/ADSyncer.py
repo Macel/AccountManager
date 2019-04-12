@@ -135,7 +135,13 @@ class ADSyncer():
                         else:
                             pass
                             # No secondary match found,
-                            # User has an OU assignment rule?
+                            # User is active?
+                            if (dsusr[DS_STATUS_COLUMN_NAME]
+                                in set(DS_STATUS_ACTIVE_VALUES)):
+                                # Create the user.
+                                sAMAccountName = self._adam.generateUserName(AD_)
+                                self._adam.createUser(linkid, cn: str, ou: str, sAMAccountName: str,
+                                               upn: str, attributes: dict)
                             # If not,
                                 # don't bother creating the user and log it
                             # If so,

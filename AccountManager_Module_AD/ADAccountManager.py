@@ -340,15 +340,14 @@ class GetADAccountManager():
                         retval[atr] = None
                     return retval
 
-            def generateUserName(fields: str, format: str):
+            def generateUserName(format: str, fields: str):
                 """
                 Generate a username for active directory given the provided name fields
                 from the data source and a format string explaining how many characters
                 from each field and which order to use them in.  The ADAccountManager
                 implementation of this function takes into consideration characters
                 that are note valid in an AD username.
-                fields should be a tuple of strings that will comprise the username
-                example: ("Robert","Meany","2015")
+
                 format should be a tuple of strings representing the formatting codes
                 to apply on each string in the tuple.
                 example: ("LTR:3","LTR:50","RTL:2")
@@ -360,13 +359,16 @@ class GetADAccountManager():
                 username tuple is 0 or 1 characters in length, the entire string will be
                 included.
 
+                fields should be a tuple of strings that will comprise the username
+                example: ("Robert","Meany","2015")
+
                 The above example username and format tuples would form the username:
                 RobMeany15
 
                 If the username strings contain any invalid AD characters, those
                 characters will be removed *before* applying the formatting.
                 """
-                return AccountManager.generateUserName(fields, format,
+                return AccountManager.generateUserName(format, fields,
                                                        AD_USERNAME_INVALID_CHARS)
 
             def setAttribute(self, linkid: str, attributeName: str,

@@ -128,10 +128,7 @@ class AccountManager(ABC):
         result = {}
         datarow = self._data.get(rowid, [])
         for col in self._dataColumns.keys():
-            try:
-                result[col] = datarow[self._dataColumns[col]]
-            except IndexError as e:
-                print(e)
+            result[col] = datarow[self._dataColumns[col]]
         return result
 
     @abstractmethod
@@ -165,14 +162,11 @@ class AccountManager(ABC):
         """
         pass
 
-    def generateUserName(fields: str, format: str, excludeChars: str) -> str:
+    def generateUserName(format: str, fields: str, excludeChars: str) -> str:
         """
         Specific implementations that inherit from AccountManager may wish
         to override this method and automatically apply the appropriate
         excludeChars.
-
-        fields should be a tuple of strings that will comprise the username
-        example: ("Robert","Meany","2015")
 
         format should be a tuple of strings representing the formatting codes
         to apply on each string in the tuple.
@@ -186,6 +180,9 @@ class AccountManager(ABC):
         string in the username tuple. Again, if the corresponding string in the
         username tuple is 0 or 1 characters in length, the entire string will be
         included.
+
+        fields should be a tuple of strings that will comprise the username
+        example: ("Robert","Meany","2015")
 
         The above example username and format tuples would form the username:
         RobMeany15
