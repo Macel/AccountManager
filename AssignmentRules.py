@@ -1,5 +1,8 @@
 import re
 
+MATCH_ANY_RULE = 0
+MATCH_ALL_RULES = 1
+
 class AssignmentRule():
     def __init__(self, sourceColumnName: str,
                  sourceColumnExpectedValueRegex: str):
@@ -31,7 +34,8 @@ class AssignmentRule():
         Checks to see if the provided value matches this rule's regular
         expression and returns true if so, otherwise false.
         """
-        if re.search(self._sourceColumnExpectedValueRegex, val):
+        result = re.search(self._sourceColumnExpectedValueRegex, val)
+        if result:
             return True
         else:
             return False

@@ -1,12 +1,12 @@
 from AssignmentRules import AssignmentRule
-
+from Exceptions import UserNameInvalidFieldDataException
 
 class UserNameAssignment():
 
     MATCH_ANY_RULE = 0
     MATCH_ALL_RULES = 1
 
-    def __init__(self, rules: AssignmentRule, matchType: int, formats: tuple,
+    def __init__(self, rules: AssignmentRule, matchMethod: int, formats: tuple,
                  userNameFields: str):
         """
         Creates a UserNameAssignment
@@ -21,14 +21,30 @@ class UserNameAssignment():
         MATCH_ALL_RULES if all rules in this list must be matched to use this
         assignment.
 
-        formats: a tuple of tuples, each tuple containing a list of formatting
-        strings for how the username should be constructed (see settings.py)
+        userNameFields: should be a tuple of strings that will comprise the username
+        example: ("Robert","Meany","2015")
 
-        userNameFields: a tuple of strings containing the fields that will be
-        used to construct the username.
+        formats: a tuple of tuples, each tuple containing a list of formatting
+        strings for how the username should be constructed.
 
         Each tuple in formats should have the same number of formatting strings
         as the number of fields provided in userNameFields.
+
+        each format should be a tuple of strings representing the formatting codes
+        to apply on each string in the tuple.
+        example: ("LTR:3","LTR:50","RTL:2")
+
+        "LTR:3" means to take up to the first 3 characters of the corresponding
+        field in the username tuple.  If the corresponding field is shorter
+        than 3 characters, the entire value of the first field will be included.
+
+        "RTL:2" means to take the last two characters of the corresponding
+        string in the username tuple. Again, if the corresponding string in the
+        username tuple is 0 or 1 characters in length, the entire string will be
+        included.
+
+        The above example username and format tuples would form the username:
+        RobMeany15
         """
 
         # pack into a 1-element tuple if only one value was provided.
@@ -41,7 +57,7 @@ class UserNameAssignment():
         self._rules = rules
         self._formats = formats
         self._userNameFields = userNameFields
-        self._matchType = matchType
+        self._matchMethod = matchMethod
 
     @property
     def matchMethod(self) -> int:
@@ -60,6 +76,22 @@ class UserNameAssignment():
         requirements for this username assignment.
         """
         return self._rules
+
+    @property
+    def formats(self) -> tuple:
+        """
+        Returns a tuple containing tuples of formatting rule strings for this
+        UserNameAssignment
+        """
+        return self._formats
+
+    @property
+    def userNameFields(self) -> str:
+        """
+        Returns a tuple of strings defining the name of the fields that will be
+        used to generate the username.
+        """
+        return self._userNameFields
 
     def match(self, row: dict) -> bool:
         """
@@ -85,9 +117,46 @@ class UserNameAssignment():
 
         Returns the number of rules that matched.
         """
-
         matchCount = 0
         for rule in self._rules:
             if rule.match(row[rule.sourceColumnName]):
                 matchCount += 1
         return matchCount
+
+    def getUserName(self, format: str, fielddata: str, excludeChars: str) -> str:
+        """
+        fielddata: tuple of strings that comprise the username to be created.
+        excludeChars: a string of individual characters that will be removed if
+        found anywhere in the generated username.
+        Note: if any of the fields provided are None (null) or zero length,
+        it will be assumed that the user record is missing important data and
+        this function will raise an exception.
+        """
+        # Ensures if only one field / format code is sent, it is still iterable
+        # in a tuple.
+        for fld in fielddata:
+            if fld is None or len(fld) == 0:
+                raise UserNameInvalidFieldDataException("One or more of the fields to "
+                                               + "create the username did not "
+                                               + "contain valid data.")
+
+        # Remove any characters that are specified as excluded from the username
+        excludeChars = tuple(excludeChars)
+        newfields = []
+        for fld in fielddata:
+            for char in excludeChars:
+                fld = fld.replace(char, "")
+            newfields.append(fld)
+        fielddata = tuple(newfields,)
+        newfields = None
+
+        i = 0
+        result = ""
+        for itm in format:
+            a = itm.split(":")
+            if a[0] == "LTR":
+                result += fielddata[i][:int(a[1])]
+            elif a[0] == "RTL":
+                result += fielddata[i][-int(a[1]):]
+            i += 1
+        return result

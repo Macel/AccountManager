@@ -14,11 +14,12 @@ import ldap
 from ldap.controls import SimplePagedResultsControl
 from ldap.modlist import addModlist, modifyModlist
 from ldap.filter import escape_filter_chars
+from Exceptions import PasswordNotSetException
+
 
 """
 Active Directory Attribute Constants Definitions
 """
-AD_USERNAME_INVALID_CHARS = "/\\[]:;|=+*?<>\"@"
 UAC_OBJECT_SCRIPT = 1
 UAC_OBJECT_DISABLED = 2
 UAC_OBJECT_HOMEDIR_REQUIRED = 8
@@ -112,6 +113,7 @@ class GetADAccountManager():
         self._maxSize = maxSize
 
     def __enter__(self):
+
         class ADAccountManager(AccountManager):
             FIRST_AD_USERS_PAGE = b''
 
@@ -302,6 +304,7 @@ class GetADAccountManager():
 
                 searchAttributeName: The name of the AD attribute to search on
                 searchAttributeValue: The value to look for in the search attribute.
+
                 attributes: 1 or more attributes that should be returned as a
                 dictionary of the form {attribute name: value} if a matching
                 user was found.  If attributes is None, just the DN of the discovered
@@ -340,37 +343,6 @@ class GetADAccountManager():
                         retval[atr] = None
                     return retval
 
-            def generateUserName(format: str, fields: str):
-                """
-                Generate a username for active directory given the provided name fields
-                from the data source and a format string explaining how many characters
-                from each field and which order to use them in.  The ADAccountManager
-                implementation of this function takes into consideration characters
-                that are note valid in an AD username.
-
-                format should be a tuple of strings representing the formatting codes
-                to apply on each string in the tuple.
-                example: ("LTR:3","LTR:50","RTL:2")
-                "LTR:3" means to take up to the first 3 characters of the corresponding
-                field in the username tuple.  If the corresponding field is shorter
-                than 3 characters, the entire value of the first field will be included.
-                "RTL:2" means to take the last two characters of the corresponding
-                string in the username tuple. Again, if the corresponding string in the
-                username tuple is 0 or 1 characters in length, the entire string will be
-                included.
-
-                fields should be a tuple of strings that will comprise the username
-                example: ("Robert","Meany","2015")
-
-                The above example username and format tuples would form the username:
-                RobMeany15
-
-                If the username strings contain any invalid AD characters, those
-                characters will be removed *before* applying the formatting.
-                """
-                return AccountManager.generateUserName(format, fields,
-                                                       AD_USERNAME_INVALID_CHARS)
-
             def setAttribute(self, linkid: str, attributeName: str,
                              attributeValue: str):
                 """
@@ -384,12 +356,21 @@ class GetADAccountManager():
 
                 attributeValue: The new value for the AD attribute.
                 """
-
                 dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
-                modlist = [(ldap.MOD_REPLACE, attributeName,
-                            [attributeValue.encode(self._targetEncoding)])]
-                # TODO: Error Handling
-                self._ld.modify_s(dn, modlist)
+                modlist = []
+                if attributeValue is None or len(attributeValue) == 0:
+                    modlist = [(ldap.MOD_DELETE, attributeName, None)]
+                    try:
+                        self._ld.modify_s(dn, modlist)
+                    except Exception as e:
+                        # If the attribute doesn't exist anyway, ignore the
+                        # exception.
+                        if type(e) != ldap.NO_SUCH_ATTRIBUTE:
+                            raise e
+                else:
+                    modlist = [(ldap.MOD_REPLACE, attributeName,
+                                [attributeValue.encode(self._targetEncoding)])]
+                    self._ld.modify_s(dn, modlist)
 
             def linkUser(self, secondaryMatchVal: str, linkid: str):
                 """
@@ -413,7 +394,7 @@ class GetADAccountManager():
                 self._ld.modify_s(dn, modlist)
 
             def createUser(self, linkid: str, cn: str, ou: str, sAMAccountName: str,
-                           upn: str, attributes: dict):
+                           upn: str, attributes: dict = {}):
                 """
                 Create a new AD user account and enable it.
 
@@ -427,8 +408,8 @@ class GetADAccountManager():
 
                 upn: the userPrincipalName (username + @domainsuffix)
 
-                attributes: dictionary of additional optional attribute names and
-                values to be set.
+                attributes: an optional dictionary of additional attribute
+                names and values to be set.
 
                 groups: tuple of DNs of groups this account should be made a member of.
                 """
@@ -446,9 +427,10 @@ class GetADAccountManager():
 
                 # Append attributes to the mod list.
                 for key in attributes.keys():
-                    moditm = (key, [attributes[key].encode(self._targetEncoding)])
-                    modlist.append(moditm)
-
+                    # Only add the attribute as a modification if it has a value
+                    if attributes[key] is not None and len(attributes[key]) > 0:
+                        moditm = (key, [attributes[key].encode(self._targetEncoding)])
+                        modlist.append(moditm)
                 # Create the user.
                 try:
                     self._ld.add_s(dn, modlist)
@@ -503,7 +485,6 @@ class GetADAccountManager():
                 modlist = [(ldap.MOD_ADD, "member",
                             [dn.encode(self._targetEncoding)])]
                 for grp in grps_to_assign:
-                    # TODO: Error Handling
                     self._ld.modify_s(grp, modlist)
                 return tuple(grps_to_assign)
 
@@ -562,6 +543,22 @@ class GetADAccountManager():
                     except Exception as e:
                         raise e
 
+            def setUserPassword(self, linkid: str, passwd: str):
+                """
+                Attempt to set the password for the user with the provided
+                linkid.  Will raise PasswordNotSetException if the password
+                could not be set.
+                """
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
+                passwd = "\"" + passwd + "\""
+                modlist = [(ldap.MOD_REPLACE,
+                            "unicodePwd",
+                            passwd.encode("utf-16-le"))]
+                try:
+                    self._ld.modify_s(dn, modlist)
+                except Exception as e:
+                    raise PasswordNotSetException(str(e))
+
             def userEnabled(self, linkid) -> bool:
                 """
                 Returns true if the user is enabled or false if not.
@@ -575,6 +572,23 @@ class GetADAccountManager():
                     return False
                 else:
                     return True
+
+            def deleteUser(self, linkid):
+                """
+                Attempts deletion of a linked user from AD.
+                """
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
+                self._ld.delete_s(dn)
+
+            def forcePasswordChange(self, linkid):
+                """
+                Forces the user with the provided linkid to reset their Password
+                on the next login.
+                """
+                dn = self.getLinkedUserInfo(linkid)["distinguishedName"][0]
+                modlist = [(ldap.MOD_REPLACE,"pwdLastSet",
+                            "0".encode(self._targetEncoding))]
+                self._ld.modify_s(dn, modlist)
 
             def finalize(self):
                 # Close LDAP Connection

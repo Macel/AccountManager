@@ -10,14 +10,11 @@ can be used to search for existing unsynchronized accounts.
 """
 
 from abc import ABC, abstractmethod, abstractproperty
-import random
+from PasswordAssignments import PASS_TYPE_ALPHA, PASS_TYPE_ALPHA_NUMERIC, \
+                                PASS_TYPE_ALPHA_SYMBOLS, PASS_TYPE_WORDS
 
 
 class AccountManager(ABC):
-    PASS_TYPE_WORDS = 0
-    PASS_TYPE_ALPHA = 1
-    PASS_TYPE_ALPHA_NUMERIC = 2
-    PASS_TYPE_ALPHA_SYMBOLS = 3
 
     def __init__(self, dataToImport: dict, dataColumnHeaders: dict,
                  dataLinkColumnName: str, targetLinkAttribute: str,
@@ -161,110 +158,3 @@ class AccountManager(ABC):
         new user accounts in the target database.
         """
         pass
-
-    def generateUserName(format: str, fields: str, excludeChars: str) -> str:
-        """
-        Specific implementations that inherit from AccountManager may wish
-        to override this method and automatically apply the appropriate
-        excludeChars.
-
-        format should be a tuple of strings representing the formatting codes
-        to apply on each string in the tuple.
-        example: ("LTR:3","LTR:50","RTL:2")
-
-        "LTR:3" means to take up to the first 3 characters of the corresponding
-        field in the username tuple.  If the corresponding field is shorter
-        than 3 characters, the entire value of the first field will be included.
-
-        "RTL:2" means to take the last two characters of the corresponding
-        string in the username tuple. Again, if the corresponding string in the
-        username tuple is 0 or 1 characters in length, the entire string will be
-        included.
-
-        fields should be a tuple of strings that will comprise the username
-        example: ("Robert","Meany","2015")
-
-        The above example username and format tuples would form the username:
-        RobMeany15
-        """
-        # Ensures if only one field / format code is sent, it is still iterable
-        # in a tuple.
-        if type(fields) is not tuple:
-            fields = (fields,)
-        if type(format) is not tuple:
-            format = (format,)
-
-        # Remove any characters that are specified as excluded from the username
-        excludeChars = tuple(excludeChars)
-        newfields = []
-        for fld in fields:
-            for char in excludeChars:
-                fld = fld.replace(char, "")
-            newfields.append(fld)
-        fields = tuple(newfields,)
-        newfields = None
-
-        # fields = ("JeanPierre", "Gonzalez-Altimarano", "2015")
-        # format = ("LTR:1", "LTR:12", "RTL:2")
-
-        i = 0
-        result = ""
-        for itm in format:
-            a = itm.split(":")
-            if a[0] == "LTR":
-                result += fields[i][:int(a[1])]
-            elif a[0] == "RTL":
-                result += fields[i][-int(a[1]):]
-            i += 1
-        return result
-
-    def generatePassword(length: int, type: int,
-                         firstwords: str = None,
-                         secondwords: str = None) -> str:
-        """
-        Generate a password of the provided length and type.
-        If the password type is AccountManager.PASS_TYPE_WORDS,
-        the length is a minimum and the password may be equal to or
-        longer than the length.  The password will be comprised of two
-        random words and two numbers.
-
-        If the password type is AccountManager.PASS_TYPE_ALPHA_SYMBOLS, a
-        random string of upper and lower case letters, numbers and symbols,
-        of the exact length provided will be created.
-
-        If the password type is AccountManager.PASS_TYPE_ALPHA_NUMERIC,
-        a random string of upper and lower case letters and numbers of the
-        provided length will be created.
-
-        If the password type is AccountManager.PASS_TYPE_ALPHA, a random
-        string of upper and lower case letters of the provided length will
-        be created.
-
-        """
-        passchars = ""
-
-        if type == AccountManager.PASS_TYPE_WORDS:
-            if firstwords is None or secondwords is None:
-                raise LookupError("Must provide password lists if using "
-                                  "PASS_TYPE_WORDS")
-            pw = ""
-            while len(pw) < length:
-                pw = "" + random.choice(firstwords) \
-                        + random.choice(secondwords) \
-                        + str(random.randrange(10, 99))
-        else:
-            if type == AccountManager.PASS_TYPE_ALPHA:
-                passchars = "abcdefghijklmnopqrstuvwxyz" \
-                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            elif type == AccountManager.PASS_TYPE_ALPHA_NUMERIC:
-                passchars = "abcdefghijklmnopqrstuvwxyz" \
-                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
-                            "1234567890"
-            elif type == AccountManager.PASS_TYPE_ALPHA_SYMBOLS:
-                passchars = "abcdefghijklmnopqrstuvwxyz" \
-                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
-                            "1234567890" \
-                            "!@#$%^&*():;,.?/\\-=+\""
-            pw = "".join(random.sample(passchars, length))
-
-        return pw
