@@ -11,7 +11,7 @@ from Settings import \
     AD_DEFAULT_USER_OU, AD_SECONDARY_MATCH_ATTRIBUTE, AD_SHOULD_GENERATE_USERNAME, \
     AD_SHOULD_GENERATE_PASSWORD, USERNAME_ASSIGNMENTS, STUDENT_USERNAME_FIELDS, \
     STUDENT_USERNAME_FORMATS, STAFF_USERNAME_FIELDS, STAFF_USERNAME_FORMATS, \
-    PASSWORD_ASSIGNMENTS
+    PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS
 
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
@@ -22,6 +22,7 @@ from Exceptions import NoFreeUserNamesException, \
                        UserNameInvalidFieldDataException, \
                        PasswordNotSetException
 from PasswordAssignments import PasswordAssignment
+from NewUserNotifications import NewUserNotification
 import re
 
 # Define any characters that should be excluded from newly generated usernames
@@ -46,6 +47,7 @@ class ADSyncer():
                          DS_COLUMN_DEFINITION.get(DS_ACCOUNT_IDENTIFIER))
         self._logger.debug("pager total record count: " + str(pager.csvRecordCount))
         i = 0
+        notify_emails = {}
         while True:
             # With each page of records from the CSV file, run the sync process
             i = pager.getPage(i)
@@ -180,16 +182,15 @@ class ADSyncer():
                                                            + "this is resolved.")
                                         continue
 
+                                self._logger.debug(linkid + ": Is active, but was not found in AD. "
+                                                   + "Will attempt to create a new AD account for this user.")
                                 try:
-                                    self._logger.debug(linkid + ": Is active, but was not found in AD. "
-                                                       + "Will attempt to create a new AD account for this user.")
-                                    self._createUser(dsusr)
+                                    upn = self._createUser(dsusr)
                                 except Exception as e:
                                     self._logger.error(linkid + ": An error occurred attempting to "
                                                        + "create new AD user account. Will attempt creation "
                                                        + "again on the next sync.  Message: " + str(e.args[0]))
                                     continue
-
                                 # Now that the user is created, grab the adusr info
                                 # TODO: Error Handling
                                 adusr = self._adam.getLinkedUserInfo(linkid,
@@ -233,11 +234,33 @@ class ADSyncer():
 
                                 self._logger.info(linkid + ": New account has been created.  dn: "
                                                   + adusr["distinguishedName"][0])
-                            # If not,
-                                # don't bother creating the user and log it
+                                # If this new user has a notification assignment, add the notification to the new user notifications list.
+                                for notification in NEW_USER_NOTIFICATIONS:
+                                    if notification.match(dsusr):
+                                        if notification.contacts in notify_emails:
+                                            # TODO: entire ds user details (tab delim) should go here, not just ad UPN.
+                                            notify_emails[notification.contacts] += [upn]
+                                        else:
+                                            # TODO: entire ds user details (tab delim) should go here, not just ad UPN.
+                                            notify_emails[notification.contacts] = [upn]
+                            else:
+                                # user is not active anyway, don't bother creating the user
+                                self._logger.debug(linkid + ": is not active, so will not bother creating a new account for this user.")
             if i == -1:  # End of CSV file reached
+                # Send out new user account notifications
+                for itm in notify_emails.keys():
+                    # TODO: Make these items settable in Settings.py
+                    recipients = itm
+                    subject = "New AD User Accounts Alert"
+                    body = "AD Accounts have been created for the following users.  This will also be their new email address." \
+                           + " Please make sure to update their email address in Powerschool if you are the responsible party:" \
+                           + "\n" + "\n".join(notify_emails[itm])
+                    # TODO: Implement email send method
+                    print("new account notification recipients: " + str(recipients))
+                    print("new account notification subject: " + subject)
+                    print("new account notification body: " + body)
+                self._logger.info("AD Sync Process complete.")
                 break
-            self._logger.info("AD Sync Process complete.")
 
     def _syncGroupMembership(self, dsusr: dict, adusr: dict, syncall: bool = False):
         """
@@ -392,10 +415,11 @@ class ADSyncer():
                 passwd = itm
         return passwd
 
-    def _createUser(self, dsusr: dict):
+    def _createUser(self, dsusr: dict) -> str:
         """
         Creates an AD user with the provided row of user information
         (dict, form { column: data }) from the datasource.
+        Returns the UPN of the new user
         """
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
 
@@ -427,3 +451,4 @@ class ADSyncer():
                                + "new user to " + "default OU.")
         # Create the user
         self._adam.createUser(linkid, un, destination_ou, un, upn)
+        return upn
