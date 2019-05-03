@@ -1,5 +1,6 @@
 import logging
 import logging.handlers
+import re
 from BufferingSMTPHandler import BufferingSMTPHandler
 from Settings import \
     IMPORT_CHUNK_SIZE, DATA_SOURCE_FILE, DS_COLUMN_DEFINITION, \
@@ -11,7 +12,9 @@ from Settings import \
     AD_DEFAULT_USER_OU, AD_SECONDARY_MATCH_ATTRIBUTE, AD_SHOULD_GENERATE_USERNAME, \
     AD_SHOULD_GENERATE_PASSWORD, USERNAME_ASSIGNMENTS, STUDENT_USERNAME_FIELDS, \
     STUDENT_USERNAME_FORMATS, STAFF_USERNAME_FIELDS, STAFF_USERNAME_FORMATS, \
-    PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS
+    PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS, SMTP_SERVER_IP, SMTP_SERVER_PORT, \
+    SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
+    AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT
 
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
@@ -23,7 +26,9 @@ from Exceptions import NoFreeUserNamesException, \
                        PasswordNotSetException
 from PasswordAssignments import PasswordAssignment
 from NewUserNotifications import NewUserNotification
-import re
+from smtplib import SMTP, SMTPException
+from email.mime.text import MIMEText
+
 
 # Define any characters that should be excluded from newly generated usernames
 # for AD.
@@ -248,19 +253,33 @@ class ADSyncer():
                                 self._logger.debug(linkid + ": is not active, so will not bother creating a new account for this user.")
             if i == -1:  # End of CSV file reached
                 # Send out new user account notifications
-                for itm in notify_emails.keys():
-                    # TODO: Make these items settable in Settings.py
-                    recipients = itm
-                    subject = "New AD User Accounts Alert"
-                    body = "AD Accounts have been created for the following users.  This will also be their new email address." \
-                           + " Please make sure to update their email address in Powerschool if you are the responsible party:" \
-                           + "\n" + "\n".join(notify_emails[itm])
-                    # TODO: Implement email send method
-                    print("new account notification recipients: " + str(recipients))
-                    print("new account notification subject: " + subject)
-                    print("new account notification body: " + body)
+                self._sendNewUserNotifications(notify_emails)
                 self._logger.info("AD Sync Process complete.")
                 break
+
+    def _sendNewUserNotifications(self, notifications: dict):
+        """
+        Takes a dictionary of the form { email-addresses : < new user info string > }
+        and sends notifications for each entry in the dictionary.
+        """
+        for recpts in notifications.keys():
+            recipients = ",".join(map(str, recpts))
+            subject = AD_USER_NOTIFICATION_SUBJECT
+            body = (
+                    AD_USER_NOTIFICATION_MSG
+                    + "\n" + "\n".join(notifications[recpts])
+                   )
+            msg = MIMEText(body)
+            msg['From'] = SMTP_FROM_ADDRESS
+            msg['To'] = recipients
+            msg['Subject'] = subject
+            try:
+                server = SMTP(SMTP_SERVER_IP, SMTP_SERVER_PORT)
+                server.send_message(msg)
+            except SMTPException as e:
+                self._logger.error("A problem occurred while attempting to send out a new user notification email. "
+                                   + "Error details as follows: " + str(e))
+            print("new account notification msg: " + str(msg))
 
     def _syncGroupMembership(self, dsusr: dict, adusr: dict, syncall: bool = False):
         """
