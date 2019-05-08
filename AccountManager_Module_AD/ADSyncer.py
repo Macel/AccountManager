@@ -85,10 +85,14 @@ class ADSyncer():
                 for rowid in self._adam.data:
                     dsusr = self._adam.dataRow(rowid)
                     linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
-                    # TODO: Error Handling
-                    adusr = self._adam.getLinkedUserInfo(linkid,
-                                                         *[atr.mappedAttribute
-                                                          for atr in AD_ATTRIBUTE_MAP])
+                    try:
+                        adusr = self._adam.getLinkedUserInfo(linkid,
+                                                             *[atr.mappedAttribute
+                                                              for atr in AD_ATTRIBUTE_MAP])
+                    except Exception as e:
+                        self._logger.error(linkid + " An error occurred while attempting to query AD for "
+                                           "linked user information.  Error details: " + str(e))
+                        continue
                     # Are they linked to a user in AD (by their provided ID)?
                     if adusr is not None:  # If so,
                         # Sync any updated information
@@ -100,32 +104,53 @@ class ADSyncer():
                             in set(DS_STATUS_ACTIVE_VALUES)):
                             self._logger.debug(linkid + " is active, syncing attributes"
                                                + " and group membership.")
-                            # TODO: Error Handling
-                            self._syncAttributes(dsusr, adusr)
-                            # TODO: Error Handling
-                            self._syncGroupMembership(dsusr, adusr)
+                            try:
+                                self._syncAttributes(dsusr, adusr)
+                            except Exception as e:
+                                self._logger.error(linkid + "An error occurred while attempting to "
+                                                   "sync attributes for this user.  Error details: "
+                                                   + str(e))
+                            try:
+                                self._syncGroupMembership(dsusr, adusr)
+                            except Exception as e:
+                                self._logger.error(linkid + "An error occurred while attempting to "
+                                                   "sync group membership for this user.  Error details: "
+                                                   + str(e))
                         else:
                             self._logger.debug(linkid + " is not active, will not bother"
                                                + " syncing attributes/group membership.")
 
                         self._logger.debug(linkid + ": Syncing active status.")
-                        # TODO: Error Handling
-                        self._syncActiveStatus(dsusr, adusr)
-
+                        try:
+                            self._syncActiveStatus(dsusr, adusr)
+                        except Exception as e:
+                            self._logger.error(linkid + "An error occurred while attempting to "
+                                               "sync active status for this user.  Error details: "
+                                               + str(e))
                         # Sync the OU last because if a user's OU changes,
                         # the OU information in adusr will become invalid.
                         self._logger.debug(linkid + ": Syncing OU.")
-                        self._syncOU(dsusr, adusr)
+                        try:
+                            self._syncOU(dsusr, adusr)
+                        except exceptions as e:
+                            self._logger.error(linkid + "An error occurred while attempting to "
+                                               "sync the OU for this user.  Error details: "
+                                               + str(e))
                     else:  # Linked user not found...
                         # See if a user exists with a match in the secondary field.
                         if (dsusr[DS_SECONDARY_MATCH_COLUMN] is not None
                             and len(dsusr[DS_SECONDARY_MATCH_COLUMN])) > 0:
                             # Don't match on an empty secondary field.
-                            # TODO: Error Handling
-                            adusr = self._adam.getUserInfo(AD_SECONDARY_MATCH_ATTRIBUTE,
-                                                           dsusr[DS_SECONDARY_MATCH_COLUMN],
-                                                           *[atr.mappedAttribute
-                                                             for atr in AD_ATTRIBUTE_MAP])
+                            try:
+                                adusr = self._adam.getUserInfo(AD_SECONDARY_MATCH_ATTRIBUTE,
+                                                               dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                               *[atr.mappedAttribute
+                                                                 for atr in AD_ATTRIBUTE_MAP])
+                            except Exception as e:
+                                self._logger.error(linkid + " An error occurred while attempting to query AD for "
+                                                   "information on this linked user. "
+                                                   "Error details: " + str(e))
+                                continue
                         else:
                             adusr = None
                         if adusr is not None:
@@ -137,10 +162,14 @@ class ADSyncer():
                                                + AD_SECONDARY_MATCH_ATTRIBUTE
                                                + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
                                                + ".  Linking user and syncing information.")
-
-                            # TODO: Error Handling
-                            self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
-                                                linkid)
+                            try:
+                                self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                    linkid)
+                            except Exception as e:
+                                self._logger.error(linkid+ "An error occurred while attempting to link an "
+                                                   "existing AD user to the datasource. "
+                                                   " Error details: " + str(e))
+                                continue
                             self._logger.info(linkid + ": An unlinked AD user has been found with"
                                               + " a matching secondary attribute and linked.")
                             # Don't bother syncing attributes/group membership if
@@ -149,22 +178,36 @@ class ADSyncer():
                                 in set(DS_STATUS_ACTIVE_VALUES)):
                                 self._logger.debug(linkid + " is active, syncing attributes"
                                                    + " and group membership.")
-                                # TODO: Error Handling
-                                self._syncAttributes(dsusr, adusr)
-                                # TODO: Error Handling
-                                self._syncGroupMembership(dsusr, adusr)
+                                try:
+                                    self._syncAttributes(dsusr, adusr)
+                                except Exception as e:
+                                    self._logger.error(linkid + "An error occurred while attempting to "
+                                                       "sync attributes for this user.  Error details: "
+                                                       + str(e))
+                                try:
+                                    self._syncGroupMembership(dsusr, adusr)
+                                except Exception as e:
+                                    self._logger.error(linkid + "An error occurred while syncing group membership "
+                                                       "for this user.  Error details: " + str(e))
                             else:
                                 self._logger.debug(linkid + " is not active, will not bother"
                                                    + " syncing attributes/group membership.")
 
                             self._logger.debug(linkid + ": Syncing active status.")
-                            # TODO: Error Handling
-                            self._syncActiveStatus(dsusr, adusr)
+                            try:
+                                self._syncActiveStatus(dsusr, adusr)
+                            except Exception as e:
+                                self._logger.error(linkid + "An error occurred while syncing the active status "
+                                                   "for this user.  Error details: " + str(e))
                             # Sync the OU last because if a user's OU changes,
                             # the OU information in adusr will become invalid.
                             self._logger.debug(linkid + ": Syncing OU.")
-                            # TODO: Error Handling
-                            self._syncOU(dsusr, adusr)
+                            try:
+                                self._syncOU(dsusr, adusr)
+                            except Exception as e:
+                                self._logger.error(linkid + "An error occurred while syncing OU membership "
+                                                   "for this user.  Error details: " + str(e))
+                                continue
                         else:
                             # No secondary match found,
                             # User is active?
@@ -202,46 +245,84 @@ class ADSyncer():
                                                        + "create new AD user account. Will attempt creation "
                                                        + "again on the next sync.  Message: " + str(e.args[0]))
                                     continue
-                                # Now that the user is created, grab the adusr info
-                                # TODO: Error Handling
-                                adusr = self._adam.getLinkedUserInfo(linkid,
-                                                                     *[atr.mappedAttribute
-                                                                      for atr in AD_ATTRIBUTE_MAP])
-                                # Set additional attributes for the user per
-                                # the attribute map...
-                                # TODO: Error Handling
-                                self._syncAttributes(dsusr, adusr, syncall=True)
-                                # Join the user to any groups
-                                # TODO: Error Handling
-                                self._syncGroupMembership(dsusr, adusr, syncall=True)
 
+                                # Now that the user is created, grab the adusr info
                                 try:
-                                    self._adam.setUserPassword(linkid, passwd)
-                                except PasswordNotSetException as pe:
-                                    # A problem occurred setting the password.
-                                    errmsg = linkid + ": Attempting to set password for new user failed. "
-                                    # Delete the user so creation will be re-attempted.
+                                    adusr = self._adam.getLinkedUserInfo(linkid,
+                                                                        *[atr.mappedAttribute
+                                                                        for atr in AD_ATTRIBUTE_MAP])
+                                except Exception as e:
+                                    self._logger.error(linkid + "An error occurred while attempting to query AD for linked "
+                                                       "user information on this newly created user. Error details: " + str(e))
                                     try:
                                         self._adam.deleteUser(linkid)
-
-                                    except Exception as e:
-                                        errmsg += "Additionally, user deletion was attempted so the password " \
-                                                  + "set would be attempted on the next sync, but deletion also failed. " \
-                                                  + "This user will have to be manually deleted from AD, or their " \
-                                                  + "account will need to have a password set and activated manually. " \
-                                                  + " ...  User deletion failure details: " + str(e)
-                                    errmsg += "User will be deleted, and creation will be attempted again on the next sync." \
-                                              + "Password set failure details: " + str(pe)
-                                    self._logger.error(errmsg)
+                                    except Exception as ex:
+                                        self._logger.error(linkid + " An error occurred while attempting to delete user "
+                                                           "object after a failed creation attempt. This user may need to be "
+                                                           "manually deleted in AD so creation can be attempted again. "
+                                                           "Error details: " + str(ex))
                                     continue
-                                # TODO: Error Handling
-                                self._syncActiveStatus(dsusr, adusr)
+
+                                # Set additional attributes for the user per
+                                # the attribute map...
+                                try:
+                                    self._syncAttributes(dsusr, adusr, syncall=True)
+                                except Exception as e:
+                                    self._logger.error(linkid + "An error occurred while syncing attributes "
+                                                       "for this user.  Error details: " + str(e))
+                                    try:
+                                        self._adam.deleteUser(linkid)
+                                    except Exception as ex:
+                                        self._logger.error(linkid + " An error occurred while attempting to delete user "
+                                                           "object after a failed creation attempt. This user may need to be "
+                                                           "manually deleted in AD so creation can be attempted again. "
+                                                           "Error details: " + str(ex))
+                                    continue
+
+                                # Join the user to any groups
+                                try:
+                                    self._syncGroupMembership(dsusr, adusr, syncall=True)
+                                except Exception as e:
+                                    self._logger.error(linkid + "An error occurred while syncing group membership "
+                                                       "for this user.  Error details: " + str(e))
+                                    try:
+                                        self._adam.deleteUser(linkid)
+                                    except Exception as ex:
+                                        self._logger.error(linkid + " An error occurred while attempting to delete user "
+                                                           "object after a failed creation attempt. This user may need to be "
+                                                           "manually deleted in AD so creation can be attempted again. "
+                                                           "Error details: " + str(ex))
+                                    continue
+                                try:
+                                    self._adam.setUserPassword(linkid, passwd)
+                                except Exception as e:
+                                    # A problem occurred setting the password.
+                                    self._logger.error(linkid + ": Attempting to set password for new user failed. "
+                                                       "Account will be deleted so password set can be attempted "
+                                                       "again next time.")
+                                    # Delete the user so creation will be re-attempted.
+                                    try:
+                                        self._deleteUser(linkid)
+                                    except Exception as ex:
+                                        self.logger.error(linkid + ": Could not delete this user. Their account may need "
+                                                          "to be manually deleted so creation can be attempted again.
+                                                          "Error details: " + str(ex))
+                                    continue
+                                try:
+                                    self._syncActiveStatus(dsusr, adusr)
+                                except Exception as e:
+                                    self._logger.error(linkid + "An error occurred while attempting to activate the "
+                                                       "new user account.  Error details: " + str(e))
 
                                 # Force a password change if the flag is set.
                                 if forcepwdchg:
                                     self._logger.debug(linkid + ": Will be forced to change password on next login")
-                                    # TODO: Error Handling
-                                    self._adam.forcePasswordChange(linkid)
+                                    try:
+                                        self._adam.forcePasswordChange(linkid)
+                                    except Exception as e:
+                                        self._logger.error(linkid + ": An error occurred while attempting to set the "
+                                                           "\"User Must Change Password\" flag for this user. "
+                                                           "The error details were: " + str(e))
 
                                 self._logger.info(linkid + ": New account has been created.  dn: "
                                                   + adusr["distinguishedName"][0])
@@ -265,10 +346,14 @@ class ADSyncer():
                                 self._logger.debug(linkid + ": is not active, so will not bother creating a new account for this user.")
                 if (len(output_data) > 0):
                     # If there is new user data to output to CSV, write it now.
-                    # TODO: Error Handling
-                    with open(ACCOUNT_INFO_FILE_PATH, mode='a') as output_file:
-                        writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
-                        writer.writerows(output_data)
+                    try:
+                        with open(ACCOUNT_INFO_FILE_PATH, mode='a') as output_file:
+                            writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
+                            writer.writerows(output_data)
+                    except Exception as e:
+                        self._logger.error("An error occurred while attempting to output new user account information to the export file. "
+                                           "Error details: " + str(e) + "\n\nData that was not successfully written to file as follows: "
+                                            + str(output_data))
 
             if i == -1:  # End of CSV file reached
                 # Send out new user account notifications
@@ -317,7 +402,6 @@ class ADSyncer():
 
         # First ensure that the user is assigned to any synced groups whose
         # rules they match.
-        # TODO: Error Handling
         result = self._adam.assignUserGroups(linkid, *matchedgrps)
         if len(result) > 0:
             self._logger.info(linkid + ": was added to the following group(s): "
@@ -325,7 +409,6 @@ class ADSyncer():
 
         # Now verify that the user is not in any synchronized groups that
         # they do *not* match the rules for....
-        # TODO: Error Handling
         result = self._adam.deassignUserGroups(linkid, *nomatchedgrps)
         if len(result) > 0:
             self._logger.info(linkid + ": was removed from the following "
@@ -352,7 +435,6 @@ class ADSyncer():
             destination_ou = AD_DEFAULT_USER_OU
             self._logger.debug(linkid + ": No OU assignments found. Assigning "
                                + "default OU.")
-        # TODO: Error Handling
         if (self._adam.setUserOU(linkid, destination_ou)):
             self._logger.info(linkid + ": Moved to " + destination_ou)
 
