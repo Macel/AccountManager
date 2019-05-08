@@ -14,7 +14,9 @@ from Settings import \
     STUDENT_USERNAME_FORMATS, STAFF_USERNAME_FIELDS, STAFF_USERNAME_FORMATS, \
     PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS, SMTP_SERVER_IP, SMTP_SERVER_PORT, \
     SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
-    AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT
+    AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT, \
+    SHOULD_GENERATE_ACCOUNT_INFO_FILE, ACCOUNT_INFO_FILE_PATH, \
+    ACCOUNT_INFO_FILE_FIELDS
 
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
@@ -28,6 +30,8 @@ from PasswordAssignments import PasswordAssignment
 from NewUserNotifications import NewUserNotification
 from smtplib import SMTP, SMTPException
 from email.mime.text import MIMEText
+import csv
+import datetime
 
 
 # Define any characters that should be excluded from newly generated usernames
@@ -57,6 +61,8 @@ class ADSyncer():
             # With each page of records from the CSV file, run the sync process
             i = pager.getPage(i)
             currentPage = pager.page
+            output_data = []  # Will contain data for any new users that will be
+                              # written to the output CSV (if setting enabled)
 
             # With the current page, use ADAccountManager to sync data to AD
             self._logger.debug("begin accountmanager init")
@@ -239,18 +245,31 @@ class ADSyncer():
 
                                 self._logger.info(linkid + ": New account has been created.  dn: "
                                                   + adusr["distinguishedName"][0])
+                                # Append the new user to a data structure which will be output to the accountinfo csv file
+                                # (if this option is enabled)
+                                if SHOULD_GENERATE_ACCOUNT_INFO_FILE:
+                                    output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
+                                     for col in ACCOUNT_INFO_FILE_FIELDS])
                                 # If this new user has a notification assignment, add the notification to the new user notifications list.
                                 for notification in NEW_USER_NOTIFICATIONS:
                                     if notification.match(dsusr):
+                                        new_account_info = "Username: " + upn + ", " + ", ".join(
+                                            [col + ": " + self._adam.dataRow(linkid)[col]
+                                             for col in ACCOUNT_INFO_FILE_FIELDS])
                                         if notification.contacts in notify_emails:
-                                            # TODO: entire ds user details (tab delim) should go here, not just ad UPN.
-                                            notify_emails[notification.contacts] += [upn]
+                                            notify_emails[notification.contacts] += [new_account_info]
                                         else:
-                                            # TODO: entire ds user details (tab delim) should go here, not just ad UPN.
-                                            notify_emails[notification.contacts] = [upn]
+                                            notify_emails[notification.contacts] = [new_account_info]
                             else:
                                 # user is not active anyway, don't bother creating the user
                                 self._logger.debug(linkid + ": is not active, so will not bother creating a new account for this user.")
+                if (len(output_data) > 0):
+                    # If there is new user data to output to CSV, write it now.
+                    # TODO: Error Handling
+                    with open(ACCOUNT_INFO_FILE_PATH, mode='a') as output_file:
+                        writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
+                        writer.writerows(output_data)
+
             if i == -1:  # End of CSV file reached
                 # Send out new user account notifications
                 self._sendNewUserNotifications(notify_emails)

@@ -116,7 +116,7 @@ class AccountManager(ABC):
         else:
             self._data = data
 
-    def dataRow(self, rowid) -> tuple:
+    def dataRow(self, rowid) -> dict:
         """
         Return a row of data with the provided record identifier key or None
         if the row identifier does not exist in the data.
