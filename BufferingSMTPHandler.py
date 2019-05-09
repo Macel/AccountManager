@@ -23,6 +23,7 @@
 Test harness for the logging module. Tests BufferingSMTPHandler, an alternative
 implementation of SMTPHandler.
 Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
+Updated: 5/9/2019 by Robert Meany for Python 3 compatibility
 """
 import string
 import logging
@@ -37,6 +38,8 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
 		self.mailhost = mailhost
 		self.mailport = mailport
 		self.fromaddr = fromaddr
+		if type(toaddrs) is not tuple:
+			toaddrs = (toaddrs,)
 		self.toaddrs = toaddrs
 		self.subject = subject
 		self.username = mailusername
@@ -54,7 +57,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
 				smtp = SMTP(host=self.mailhost, port=port)
 				if not (self.username is None) and not (self.password is None):
 					smtp.login(user=self.username, password=self.password)
-				msg = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (self.fromaddr, string.join(self.toaddrs, ","),
+				msg = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (self.fromaddr, ",".join(self.toaddrs),
                                                          self.subject)
 				for record in self.buffer:
 					s = self.format(record)

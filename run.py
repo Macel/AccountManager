@@ -47,3 +47,4 @@ if __name__ == '__main__':
         adsyncer.runSyncProcess()
 
     logger.info("Finished running sync scripts.")
+    emailhandler.flush()

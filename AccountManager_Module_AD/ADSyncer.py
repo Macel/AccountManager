@@ -132,7 +132,7 @@ class ADSyncer():
                         self._logger.debug(linkid + ": Syncing OU.")
                         try:
                             self._syncOU(dsusr, adusr)
-                        except exceptions as e:
+                        except Exception as e:
                             self._logger.error(linkid + "An error occurred while attempting to "
                                                "sync the OU for this user.  Error details: "
                                                + str(e))
@@ -305,7 +305,7 @@ class ADSyncer():
                                         self._deleteUser(linkid)
                                     except Exception as ex:
                                         self.logger.error(linkid + ": Could not delete this user. Their account may need "
-                                                          "to be manually deleted so creation can be attempted again.
+                                                          "to be manually deleted so creation can be attempted again."
                                                           "Error details: " + str(ex))
                                     continue
                                 try:
