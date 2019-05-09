@@ -15,7 +15,6 @@ from Settings import \
     PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS, SMTP_SERVER_IP, SMTP_SERVER_PORT, \
     SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
     AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT, \
-    SHOULD_GENERATE_ACCOUNT_INFO_FILE, ACCOUNT_INFO_FILE_PATH, \
     ACCOUNT_INFO_FILE_FIELDS
 
 from AccountManager import AccountManager  # for atom code completion
@@ -305,12 +304,12 @@ class ADSyncer():
                                     # A problem occurred setting the password.
                                     self._logger.error(linkid + ": Attempting to set password for new user failed. "
                                                        "Account will be deleted so password set can be attempted "
-                                                       "again next time.")
+                                                       "again next time.  Error details: " + str(e))
                                     # Delete the user so creation will be re-attempted.
                                     try:
-                                        self._deleteUser(linkid)
+                                        self._adam.deleteUser(linkid)
                                     except Exception as ex:
-                                        self.logger.error(linkid + ": Could not delete this user. Their account may need "
+                                        self._logger.error(linkid + ": Could not delete this user. Their account may need "
                                                           "to be manually deleted so creation can be attempted again."
                                                           "Error details: " + str(ex))
                                     continue

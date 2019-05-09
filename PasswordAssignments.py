@@ -155,10 +155,17 @@ class PasswordAssignment():
                 raise LookupError("Must provide password lists if using "
                                   "PASS_TYPE_WORDS")
             pw = ""
+            i = 0
             while len(pw) < self._length:
                 pw = "" + random.choice(self._firstwords) \
                         + random.choice(self._secondwords) \
                         + str(random.randrange(10, 99))
+                if i == 1000:
+                    raise LookupError("Could not generate a long enough password "
+                                      "with the given word lists in a reasonable "
+                                      "amount of attempts.")
+                i += 1
+
         else:
             if self._passtype == PASS_TYPE_ALPHA:
                 passchars = "abcdefghijklmnopqrstuvwxyz" \
