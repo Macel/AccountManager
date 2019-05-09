@@ -3,8 +3,8 @@ import logging.handlers
 import re
 from BufferingSMTPHandler import BufferingSMTPHandler
 from Settings import \
-    IMPORT_CHUNK_SIZE, DATA_SOURCE_FILE, DS_COLUMN_DEFINITION, \
-    DATA_SOURCE_FILE_TYPE, DS_ACCOUNT_IDENTIFIER, DS_STATUS_ACTIVE_VALUES, \
+    IMPORT_CHUNK_SIZE, DS_COLUMN_DEFINITION, \
+    DS_ACCOUNT_IDENTIFIER, DS_STATUS_ACTIVE_VALUES, \
     DS_STATUS_INACTIVE_VALUES, DS_STATUS_COLUMN_NAME, DS_SECONDARY_MATCH_COLUMN, \
     DS_USERNAME_COLUMN_NAME, DS_PASSWORD_COLUMN_NAME, \
     AD_DC, AD_USERNAME, AD_PASSWORD, AD_BASE_USER_DN, AD_OU_ASSIGNMENTS, \
@@ -41,17 +41,23 @@ AD_USERNAME_INVALID_CHARS = "/\\[]:;|=+*?<>\"@. "
 
 class ADSyncer():
     # TODO: Make this an implementation of abstract class, AccountSyncer
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger, args):
         self._logger = logger
+        self._args = args
 
     def runSyncProcess(self):
         """
         Initiates the sync process.
         References the common and AD-related settings in Settings.py
         """
+        if self._args.DatasourceFileType == 'TSV':
+            dsfiletype = CSVPager.FILE_TYPE_TSV
+        else:
+            dsfiletype = CSVPager.FILE_TYPE_CSV
+
         # Sync accounts on paged data.
-        pager = CSVPager(DATA_SOURCE_FILE,
-                         DATA_SOURCE_FILE_TYPE,
+        pager = CSVPager(self._args.DatasourcePath,
+                         dsfiletype,
                          IMPORT_CHUNK_SIZE,
                          DS_COLUMN_DEFINITION.get(DS_ACCOUNT_IDENTIFIER))
         self._logger.debug("pager total record count: " + str(pager.csvRecordCount))
@@ -328,7 +334,7 @@ class ADSyncer():
                                                   + adusr["distinguishedName"][0])
                                 # Append the new user to a data structure which will be output to the accountinfo csv file
                                 # (if this option is enabled)
-                                if SHOULD_GENERATE_ACCOUNT_INFO_FILE:
+                                if self._args.AccountInfoExportPath:
                                     output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
                                      for col in ACCOUNT_INFO_FILE_FIELDS])
                                 # If this new user has a notification assignment, add the notification to the new user notifications list.
@@ -347,7 +353,7 @@ class ADSyncer():
                 if (len(output_data) > 0):
                     # If there is new user data to output to CSV, write it now.
                     try:
-                        with open(ACCOUNT_INFO_FILE_PATH, mode='a') as output_file:
+                        with open(self._args.AccountInfoExportPath, mode='a') as output_file:
                             writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
                             writer.writerows(output_data)
                     except Exception as e:
@@ -383,7 +389,7 @@ class ADSyncer():
             except SMTPException as e:
                 self._logger.error("A problem occurred while attempting to send out a new user notification email. "
                                    + "Error details as follows: " + str(e))
-            print("new account notification msg: " + str(msg))
+            # print("new account notification msg: " + str(msg))
 
     def _syncGroupMembership(self, dsusr: dict, adusr: dict, syncall: bool = False):
         """

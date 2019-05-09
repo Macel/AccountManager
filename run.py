@@ -1,3 +1,5 @@
+import sys
+import argparse
 import logging
 import logging.handlers
 from BufferingSMTPHandler import BufferingSMTPHandler
@@ -13,25 +15,52 @@ if __name__ == '__main__':
     ###
     # log configuration
     ###
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--DatasourcePath',
+        help='Path to the data source file for user accounts.',
+        required=True
+        )
+    parser.add_argument(
+        '--DatasourceFileType',
+        help='\'CSV\', or \'TSV\'',
+        required=True,
+        choices=['CSV', 'TSV']
+    )
+    parser.add_argument(
+        '--AccountInfoExportPath',
+        help='Path to optional new account export CSV',
+        required=False
+    )
+
+    args = parser.parse_args()
+
     logger = logging.getLogger("accounts")
-    fileformatter = logging.Formatter('%(levelname)s '
-                                      '; %(asctime)s '
-                                      '; %(message)s')
+    fileformatter = logging.Formatter(
+        '%(levelname)s '
+        '; %(asctime)s '
+        '; %(message)s'
+    )
+
     filehandler = logging.handlers.RotatingFileHandler(
         filename=LOGGING_PATH,
         mode='a',
         maxBytes=10485760,
-        backupCount=5)
+        backupCount=5
+    )
 
-    emailhandler = BufferingSMTPHandler(mailhost=SMTP_SERVER_IP,
-                                        fromaddr=SMTP_FROM_ADDRESS,
-                                        toaddrs=LOGGING_ALERTS_CONTACT,
-                                        subject="SyncAccounts: Warnings or "
-                                        "Errors Generated",
-                                        mailport=SMTP_SERVER_PORT,
-                                        mailusername=SMTP_SERVER_USERNAME,
-                                        mailpassword=SMTP_SERVER_PASSWORD,
-                                        capacity=1000)
+    emailhandler = BufferingSMTPHandler(
+        mailhost=SMTP_SERVER_IP,
+        fromaddr=SMTP_FROM_ADDRESS,
+        toaddrs=LOGGING_ALERTS_CONTACT,
+        subject="SyncAccounts: Warnings or "
+        "Errors Generated",
+        mailport=SMTP_SERVER_PORT,
+        mailusername=SMTP_SERVER_USERNAME,
+        mailpassword=SMTP_SERVER_PASSWORD,
+        capacity=1000
+    )
 
     filehandler.setFormatter(fileformatter)
     filehandler.setLevel(LOGGING_LEVEL)
@@ -43,8 +72,8 @@ if __name__ == '__main__':
     logger.info("Logging initialized")
 
     if (SYNC_TO_AD):
-        adsyncer = ADSyncer(logger)
+        adsyncer = ADSyncer(logger, args)
         adsyncer.runSyncProcess()
 
     logger.info("Finished running sync scripts.")
-    emailhandler.flush()
+    emailhandler.flush() # Ensure logging email gets sent...
