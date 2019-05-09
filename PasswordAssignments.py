@@ -5,13 +5,14 @@ PASS_TYPE_WORDS = 0
 PASS_TYPE_ALPHA = 1
 PASS_TYPE_ALPHA_NUMERIC = 2
 PASS_TYPE_ALPHA_SYMBOLS = 3
+PASS_TYPE_STATIC = 4
 
 
 class PasswordAssignment():
 
     def __init__(self, rules: AssignmentRule, matchMethod: int, length: int,
-                 passtype: int, firstwords: str = None, secondwords: str = None,
-                 usermustreset: bool = True):
+                 passtype: int, staticpass: str = None, firstwords: str = None,
+                 secondwords: str = None, usermustreset: bool = True):
         """
         Creates a PasswordAssignment
 
@@ -26,12 +27,16 @@ class PasswordAssignment():
         length: The length of the generated password.
 
         type: one of PasswordAssignments.PASS_TYPE_WORDS, PASS_TYPE_ALPHA,
-        PASS_TYPE_ALPHA_NUMERIC or PASS_TYPE_ALPHA_SYMBOLS, defining what
-        the password should be comprised of.
+        PASS_TYPE_ALPHA_NUMERIC, PASS_TYPE_ALPHA_SYMBOLS or PASS_TYPE_STATIC
+        defining what the password should be comprised of.
 
         If PASS_TYPE_WORDS is provided,
         firstwords and secondwords should also be provided as tuples of strings
         containing the words that should be used to build the password.
+
+        IF PASS_TYPE_STATIC is provided, staticpass must contain the password
+        to be assigned to the user account.  It is recommended to enforce a
+        password reset on first login when using this option.
 
         usermustreset: If true, the user should be required to reset their
         password on the next login.
@@ -53,6 +58,12 @@ class PasswordAssignment():
         self._length = length
         self._passtype = passtype
         self._usermustreset = usermustreset
+
+        if passtype == PASS_TYPE_STATIC:
+            if staticpass is None:
+                raise Exception("Must provide a static password if creating "
+                                "a PasswordAssignment with PASS_TYPE_STATIC")
+            self._staticpass = staticpass
 
     @property
     def matchMethod(self) -> int:
@@ -165,7 +176,9 @@ class PasswordAssignment():
                                       "with the given word lists in a reasonable "
                                       "amount of attempts.")
                 i += 1
-
+        elif self._passtype == PASS_TYPE_STATIC:
+            # just return the static password
+            pw = self._staticpass
         else:
             if self._passtype == PASS_TYPE_ALPHA:
                 passchars = "abcdefghijklmnopqrstuvwxyz" \
