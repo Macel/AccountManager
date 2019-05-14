@@ -206,7 +206,7 @@ class PasswordAssignment():
                         break
         return pw
 
-    def verifyPasswordStrength(pw: str, passtype: int) -> bool:
+    def verifyPasswordStrength(self, pw: str, passtype: int) -> bool:
         """
         For the given passtype (PASS_TYPE_ALPHA, PASS_TYPE_ALPHA_NUMERIC,
         PASS_TYPE_ALPHA_SYMBOLS), verify that the password provided is "strong"
