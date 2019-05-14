@@ -183,14 +183,69 @@ class PasswordAssignment():
             if self._passtype == PASS_TYPE_ALPHA:
                 passchars = "abcdefghijklmnopqrstuvwxyz" \
                             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                while True:
+                    pw = "".join(random.sample(passchars, self._length))
+                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA):
+                        break
             elif self._passtype == PASS_TYPE_ALPHA_NUMERIC:
                 passchars = "abcdefghijklmnopqrstuvwxyz" \
                             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
                             "1234567890"
+                while True:
+                    pw = "".join(random.sample(passchars, self._length))
+                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA):
+                        break
             elif self._passtype == PASS_TYPE_ALPHA_SYMBOLS:
                 passchars = "abcdefghijklmnopqrstuvwxyz" \
                             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
                             "1234567890" \
                             "!@#$%^&*():;,.?/\\-=+\""
-            pw = "".join(random.sample(passchars, self._length))
+                while True:
+                    pw = "".join(random.sample(passchars, self._length))
+                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA):
+                        break
         return pw
+
+    def verifyPasswordStrength(pw: str, passtype: int) -> bool:
+        """
+        For the given passtype (PASS_TYPE_ALPHA, PASS_TYPE_ALPHA_NUMERIC,
+        PASS_TYPE_ALPHA_SYMBOLS), verify that the password provided is "strong"
+        (has at least one of each type of character for the given password type)
+        Return true if so.
+        """
+
+        if passtype not in (PASS_TYPE_ALPHA,
+                            PASS_TYPE_ALPHA_NUMERIC,
+                            PASS_TYPE_ALPHA_SYMBOLS):
+            raise Exception("Password type provided is not valid.")
+
+        lowercount = 0
+        uppercount = 0
+        digitcount = 0
+        specialcount = 0
+
+        for letter in pw:
+            if letter.islower():
+                lowercount += 1
+            elif letter.isupper():
+                uppercount += 1
+            elif letter.isdigit():
+                digitcount += 1
+            else:
+                specialcount += 1
+
+        if passtype == PASS_TYPE_ALPHA:
+            if lowercount > 0 and uppercount > 0:
+                return True
+            else:
+                return False
+        elif passtype == PASS_TYPE_ALPHA_NUMERIC:
+            if lowercount > 0 and uppercount > 0 and digitcount > 0:
+                return True
+            else:
+                return False
+        elif passtype == PASS_TYPE_ALPHA_SYMBOLS:
+            if lowercount > 0 and uppercount > 0 and digitcount > 0 and specialcount > 0:
+                return True
+            else:
+                return False
