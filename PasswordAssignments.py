@@ -193,7 +193,7 @@ class PasswordAssignment():
                             "1234567890"
                 while True:
                     pw = "".join(random.sample(passchars, self._length))
-                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA):
+                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA_NUMERIC):
                         break
             elif self._passtype == PASS_TYPE_ALPHA_SYMBOLS:
                 passchars = "abcdefghijklmnopqrstuvwxyz" \
@@ -202,7 +202,7 @@ class PasswordAssignment():
                             "!@#$%^&*():;,.?/\\-=+\""
                 while True:
                     pw = "".join(random.sample(passchars, self._length))
-                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA):
+                    if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA_SYMBOLS):
                         break
         return pw
 
