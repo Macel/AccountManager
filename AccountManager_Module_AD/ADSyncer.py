@@ -93,7 +93,7 @@ class ADSyncer():
                     try:
                         adusr = self._adam.getLinkedUserInfo(linkid,
                                                              *[atr.mappedAttribute
-                                                              for atr in AD_ATTRIBUTE_MAP])
+                                                              for atr in AD_ATTRIBUTE_MAP], "userPrincipalName")
                     except Exception as e:
                         self._logger.error(linkid + " An error occurred while attempting to query AD for "
                                            "linked user information.  Error details: " + str(e))
@@ -132,7 +132,10 @@ class ADSyncer():
                             self._logger.error(linkid + "An error occurred while attempting to "
                                                "sync active status for this user.  Error details: "
                                                + str(e))
-                        # TODO: Check to see if a password reset is required and do so if necessary.
+                        # Check to see if a password reset is required and do so if necessary.
+                        r = None
+                        passwd = None
+                        forcepwdchg = None
                         if dsusr[RESET_PASS_COLUMN_NAME] == "1":
                             if AD_SHOULD_GENERATE_PASSWORD:
                                 try:
@@ -140,7 +143,7 @@ class ADSyncer():
                                     passwd = r[0]
                                     forcepwdchg = r[1]
                                 except Exception as e:
-                                    self._logger.error(linkid + "There was a problem generating the password for this user. "
+                                    self._logger.error(linkid + ": There was a problem generating the password for this user. "
                                                        "The password cannot be reset for this user until the problem is resolved.  "
                                                        "Error details: " + str(e))
                             else:
@@ -148,12 +151,23 @@ class ADSyncer():
                                     passwd = dsusr[DS_PASSWORD_COLUMN_NAME]
                                     forcepwdchg = True
                                 except Exception:
-                                    self._logger.error(linkid + "The datasource does not appear to have a password column, but "
+                                    self._logger.error(linkid + ": The datasource does not appear to have a password column, but "
                                                        + "AD_SHOULD_GENERATE_PASSWORD is not set.  Cannot reset user password until "
                                                        + "this is resolved.")
                             if passwd:
+                                upn = adusr['userPrincipalName'][0]
                                 try:
                                     self._adam.setUserPassword(linkid, passwd)
+                                    if self._args.AccountInfoExportPath:
+                                        output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
+                                                            for col in ACCOUNT_INFO_FILE_FIELDS])
+                                        self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
+                                                          "reset flag being set on their record in the import file.  The updated "
+                                                          "password will be recorded to the export csv file.")
+                                    else:
+                                        self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
+                                                          "reset flag being set on their record in the import file.  The updated "
+                                                          "password will not be recorded since no ACCOUNT_INFO_EXPORT_PATH is configured in settings.")
                                 except Exception as e:
                                     # A problem occurred setting the password.
                                     self._logger.error(linkid + ": Attempting to reset password for existing user failed. "
