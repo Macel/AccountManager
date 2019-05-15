@@ -15,7 +15,7 @@ from Settings import \
     PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS, SMTP_SERVER_IP, SMTP_SERVER_PORT, \
     SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
     AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT, \
-    ACCOUNT_INFO_FILE_FIELDS
+    ACCOUNT_INFO_FILE_FIELDS, RESET_PASS_COLUMN_NAME
 
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
@@ -132,6 +132,32 @@ class ADSyncer():
                             self._logger.error(linkid + "An error occurred while attempting to "
                                                "sync active status for this user.  Error details: "
                                                + str(e))
+                        # TODO: Check to see if a password reset is required and do so if necessary.
+                        if dsusr[RESET_PASS_COLUMN_NAME] == "1":
+                            if AD_SHOULD_GENERATE_PASSWORD:
+                                try:
+                                    r = self._genPassword(dsusr)
+                                    passwd = r[0]
+                                    forcepwdchg = r[1]
+                                except Exception as e:
+                                    self._logger.error(linkid + "There was a problem generating the password for this user. "
+                                                       "The password cannot be reset for this user until the problem is resolved.  "
+                                                       "Error details: " + str(e))
+                            else:
+                                try:
+                                    passwd = dsusr[DS_PASSWORD_COLUMN_NAME]
+                                    forcepwdchg = True
+                                except Exception:
+                                    self._logger.error(linkid + "The datasource does not appear to have a password column, but "
+                                                       + "AD_SHOULD_GENERATE_PASSWORD is not set.  Cannot reset user password until "
+                                                       + "this is resolved.")
+                            if passwd:
+                                try:
+                                    self._adam.setUserPassword(linkid, passwd)
+                                except Exception as e:
+                                    # A problem occurred setting the password.
+                                    self._logger.error(linkid + ": Attempting to reset password for existing user failed. "
+                                                       "Error details: " + str(e))
                         # Sync the OU last because if a user's OU changes,
                         # the OU information in adusr will become invalid.
                         self._logger.debug(linkid + ": Syncing OU.")
@@ -161,12 +187,13 @@ class ADSyncer():
                         if adusr is not None:
                             # Secondary match found,
                             # link the user by updating their ID in AD
-                            # we will check for any necessary updates*
                             # Sync any updated information
-                            self._logger.debug("Secondary match found for '"
+                            self._logger.debug(linkid + "Secondary match found for '"
                                                + AD_SECONDARY_MATCH_ATTRIBUTE
                                                + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
-                                               + ".  Linking user and syncing information.")
+                                               + ".  Linking the user."
+                                               + "  Their account information will be synchronized"
+                                               + " on the next sync process run.")
                             try:
                                 self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
                                                     linkid)
@@ -176,43 +203,9 @@ class ADSyncer():
                                                    " Error details: " + str(e))
                                 continue
                             self._logger.info(linkid + ": An unlinked AD user has been found with"
-                                              + " a matching secondary attribute and linked.")
-                            # Don't bother syncing attributes/group membership if
-                            # the user is not active.
-                            if (dsusr[DS_STATUS_COLUMN_NAME]
-                                in set(DS_STATUS_ACTIVE_VALUES)):
-                                self._logger.debug(linkid + " is active, syncing attributes"
-                                                   + " and group membership.")
-                                try:
-                                    self._syncAttributes(dsusr, adusr)
-                                except Exception as e:
-                                    self._logger.error(linkid + "An error occurred while attempting to "
-                                                       "sync attributes for this user.  Error details: "
-                                                       + str(e))
-                                try:
-                                    self._syncGroupMembership(dsusr, adusr)
-                                except Exception as e:
-                                    self._logger.error(linkid + "An error occurred while syncing group membership "
-                                                       "for this user.  Error details: " + str(e))
-                            else:
-                                self._logger.debug(linkid + " is not active, will not bother"
-                                                   + " syncing attributes/group membership.")
-
-                            self._logger.debug(linkid + ": Syncing active status.")
-                            try:
-                                self._syncActiveStatus(dsusr, adusr)
-                            except Exception as e:
-                                self._logger.error(linkid + "An error occurred while syncing the active status "
-                                                   "for this user.  Error details: " + str(e))
-                            # Sync the OU last because if a user's OU changes,
-                            # the OU information in adusr will become invalid.
-                            self._logger.debug(linkid + ": Syncing OU.")
-                            try:
-                                self._syncOU(dsusr, adusr)
-                            except Exception as e:
-                                self._logger.error(linkid + "An error occurred while syncing OU membership "
-                                                   "for this user.  Error details: " + str(e))
-                                continue
+                                              + " a matching secondary attribute and linked."
+                                              + " the rest of their information will be synced"
+                                              + " during the next sync process run.")
                         else:
                             # No secondary match found,
                             # User is active?
@@ -222,15 +215,15 @@ class ADSyncer():
                                 # Grab password for new user and set the
                                 # forcepwdchg flag accordingly
                                 if AD_SHOULD_GENERATE_PASSWORD:
-                                    pa = self._getPasswordAssignment(dsusr)
-                                    if pa is None:
-                                        self._logger.error(linkid + ": Could not find a matching password assignment method for "
-                                                           + "new user.  Will not be able to create a new user account "
-                                                           + "until this is resolved.")
+                                    try:
+                                        r = self._genPassword(dsusr)
+                                    except Exception as e:
+                                        self._logger.error(linkid + "There was a problem generating the password for this user. "
+                                                           "The user will not be created until the problem is resolved.  "
+                                                           "Error details: " + str(e))
                                         continue
-                                    else:
-                                        passwd = pa.getPass()
-                                        forcepwdchg = pa.usermustreset
+                                    passwd = r[0]
+                                    forcepwdchg = r[1]
                                 else:
                                     try:
                                         passwd = dsusr[DS_PASSWORD_COLUMN_NAME]
@@ -577,3 +570,16 @@ class ADSyncer():
         # Create the user
         self._adam.createUser(linkid, un, destination_ou, un, upn)
         return upn
+
+    def _genPassword(self, dsusr: dict) -> (str, bool):
+        """
+        Returns a tuple containing the password and true/false indicating whether
+        or not the password should be reset on first login
+        """
+        pa = self._getPasswordAssignment(dsusr)
+        if pa is None:
+            raise Exception("Could not find a matching password assignment "
+                            "method for new user.")
+        else:
+            passwd = pa.getPass()
+            return (passwd, pa.usermustreset)
