@@ -125,13 +125,6 @@ class ADSyncer():
                             self._logger.debug(linkid + " is not active, will not bother"
                                                + " syncing attributes/group membership.")
 
-                        self._logger.debug(linkid + ": Syncing active status.")
-                        try:
-                            self._syncActiveStatus(dsusr, adusr)
-                        except Exception as e:
-                            self._logger.error(linkid + "An error occurred while attempting to "
-                                               "sync active status for this user.  Error details: "
-                                               + str(e))
                         # Check to see if a password reset is required and do so if necessary.
                         r = None
                         passwd = None
@@ -172,13 +165,23 @@ class ADSyncer():
                                     # A problem occurred setting the password.
                                     self._logger.error(linkid + ": Attempting to reset password for existing user failed. "
                                                        "Error details: " + str(e))
+
+                        # Sync active status *after* password reset
+                        self._logger.debug(linkid + ": Syncing active status.")
+                        try:
+                            self._syncActiveStatus(dsusr, adusr)
+                        except Exception as e:
+                            self._logger.error(linkid + ": An error occurred while attempting to "
+                                               "sync active status for this user.  Error details: "
+                                               + str(e))
+
                         # Sync the OU last because if a user's OU changes,
                         # the OU information in adusr will become invalid.
                         self._logger.debug(linkid + ": Syncing OU.")
                         try:
                             self._syncOU(dsusr, adusr)
                         except Exception as e:
-                            self._logger.error(linkid + "An error occurred while attempting to "
+                            self._logger.error(linkid + ": An error occurred while attempting to "
                                                "sync the OU for this user.  Error details: "
                                                + str(e))
                     else:  # Linked user not found...
@@ -192,7 +195,7 @@ class ADSyncer():
                                                                *[atr.mappedAttribute
                                                                  for atr in AD_ATTRIBUTE_MAP])
                             except Exception as e:
-                                self._logger.error(linkid + " An error occurred while attempting to query AD for "
+                                self._logger.error(linkid + ": An error occurred while attempting to query AD for "
                                                    "information on this linked user. "
                                                    "Error details: " + str(e))
                                 continue
@@ -202,7 +205,7 @@ class ADSyncer():
                             # Secondary match found,
                             # link the user by updating their ID in AD
                             # Sync any updated information
-                            self._logger.debug(linkid + "Secondary match found for '"
+                            self._logger.debug(linkid + ": Secondary match found for '"
                                                + AD_SECONDARY_MATCH_ATTRIBUTE
                                                + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
                                                + ".  Linking the user."
@@ -212,7 +215,7 @@ class ADSyncer():
                                 self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
                                                     linkid)
                             except Exception as e:
-                                self._logger.error(linkid+ "An error occurred while attempting to link an "
+                                self._logger.error(linkid + ": An error occurred while attempting to link an "
                                                    "existing AD user to the datasource. "
                                                    " Error details: " + str(e))
                                 continue
@@ -232,7 +235,7 @@ class ADSyncer():
                                     try:
                                         r = self._genPassword(dsusr)
                                     except Exception as e:
-                                        self._logger.error(linkid + "There was a problem generating the password for this user. "
+                                        self._logger.error(linkid + ": There was a problem generating the password for this user. "
                                                            "The user will not be created until the problem is resolved.  "
                                                            "Error details: " + str(e))
                                         continue
@@ -243,7 +246,7 @@ class ADSyncer():
                                         passwd = dsusr[DS_PASSWORD_COLUMN_NAME]
                                         forcepwdchg = True
                                     except Exception:
-                                        self._logger.error(linkid + "The datasource does not appear to have a password column, but "
+                                        self._logger.error(linkid + ": The datasource does not appear to have a password column, but "
                                                            + "AD_SHOULD_GENERATE_PASSWORD is not set.  Cannot create user until "
                                                            + "this is resolved.")
                                         continue
@@ -264,12 +267,12 @@ class ADSyncer():
                                                                         *[atr.mappedAttribute
                                                                         for atr in AD_ATTRIBUTE_MAP])
                                 except Exception as e:
-                                    self._logger.error(linkid + "An error occurred while attempting to query AD for linked "
+                                    self._logger.error(linkid + ": An error occurred while attempting to query AD for linked "
                                                        "user information on this newly created user. Error details: " + str(e))
                                     try:
                                         self._adam.deleteUser(linkid)
                                     except Exception as ex:
-                                        self._logger.error(linkid + " An error occurred while attempting to delete user "
+                                        self._logger.error(linkid + ": An error occurred while attempting to delete user "
                                                            "object after a failed creation attempt. This user may need to be "
                                                            "manually deleted in AD so creation can be attempted again. "
                                                            "Error details: " + str(ex))
@@ -280,12 +283,12 @@ class ADSyncer():
                                 try:
                                     self._syncAttributes(dsusr, adusr, syncall=True)
                                 except Exception as e:
-                                    self._logger.error(linkid + "An error occurred while syncing attributes "
+                                    self._logger.error(linkid + ": An error occurred while syncing attributes "
                                                        "for this user.  Error details: " + str(e))
                                     try:
                                         self._adam.deleteUser(linkid)
                                     except Exception as ex:
-                                        self._logger.error(linkid + " An error occurred while attempting to delete user "
+                                        self._logger.error(linkid + ": An error occurred while attempting to delete user "
                                                            "object after a failed creation attempt. This user may need to be "
                                                            "manually deleted in AD so creation can be attempted again. "
                                                            "Error details: " + str(ex))
@@ -295,12 +298,12 @@ class ADSyncer():
                                 try:
                                     self._syncGroupMembership(dsusr, adusr, syncall=True)
                                 except Exception as e:
-                                    self._logger.error(linkid + "An error occurred while syncing group membership "
+                                    self._logger.error(linkid + ": An error occurred while syncing group membership "
                                                        "for this user.  Error details: " + str(e))
                                     try:
                                         self._adam.deleteUser(linkid)
                                     except Exception as ex:
-                                        self._logger.error(linkid + " An error occurred while attempting to delete user "
+                                        self._logger.error(linkid + ": An error occurred while attempting to delete user "
                                                            "object after a failed creation attempt. This user may need to be "
                                                            "manually deleted in AD so creation can be attempted again. "
                                                            "Error details: " + str(ex))
@@ -323,7 +326,7 @@ class ADSyncer():
                                 try:
                                     self._syncActiveStatus(dsusr, adusr)
                                 except Exception as e:
-                                    self._logger.error(linkid + "An error occurred while attempting to activate the "
+                                    self._logger.error(linkid + ": An error occurred while attempting to activate the "
                                                        "new user account.  Error details: " + str(e))
 
                                 # Force a password change if the flag is set.
@@ -363,7 +366,7 @@ class ADSyncer():
                             writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
                             writer.writerows(output_data)
                     except Exception as e:
-                        self._logger.error("An error occurred while attempting to output new user account information to the export file. "
+                        self._logger.error(linkid + ": An error occurred while attempting to output new user account information to the export file. "
                                            "Error details: " + str(e) + "\n\nData that was not successfully written to file as follows: "
                                             + str(output_data))
 
