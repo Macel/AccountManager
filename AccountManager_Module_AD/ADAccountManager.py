@@ -502,13 +502,14 @@ class GetADAccountManager():
 
                 adusr = self.getLinkedUserInfo(linkid, "memberOf")
                 adgrps = adusr["memberOf"]
+                if adgrps is None:
+                    adgrps = ()
                 dn = adusr["distinguishedName"][0]
 
                 grps_to_remove = [grp for grp in groups if grp in adgrps]
                 modlist = [(ldap.MOD_DELETE, "member",
                             [dn.encode(self._targetEncoding)])]
                 for grp in grps_to_remove:
-                    # TODO: Error Handling
                     self._ld.modify_s(grp, modlist)
                 return tuple(grps_to_remove)
 
