@@ -494,6 +494,9 @@ class ADSyncer():
                 else:
                     adusr_attr_val = None
 
+                if ds_attr_val == '':
+                    ds_attr_val = None
+
                 if ds_attr_val != adusr_attr_val:
                     self._logger.info(linkid + ": AD attribute mismatch for '"
                                        + itm.mappedAttribute + "', DS: " + str(ds_attr_val)
