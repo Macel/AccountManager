@@ -362,7 +362,7 @@ class ADSyncer():
                 if (len(output_data) > 0):
                     # If there is new user data to output to CSV, write it now.
                     try:
-                        with open(self._args.AccountInfoExportPath, mode='ab+') as output_file:
+                        with open(self._args.AccountInfoExportPath, mode='a', newline='') as output_file:
                             writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
                             writer.writerows(output_data)
                     except Exception as e:
