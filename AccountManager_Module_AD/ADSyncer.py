@@ -161,7 +161,7 @@ class ADSyncer():
                                                 + passwd + ", " + ", ".join(
                                                     [col + ": " + self._adam.dataRow(linkid)[col]
                                                      for col in ACCOUNT_NOTIFICATION_FIELDS])
-                                            if notification.contacts in notify_emails:
+                                            if notification.contacts in pass_reset_notify_emails:
                                                 pass_reset_notify_emails[notification.contacts] += [updated_account_info]
                                             else:
                                                 pass_reset_notify_emails[notification.contacts] = [updated_account_info]
@@ -171,10 +171,11 @@ class ADSyncer():
                                     #    self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
                                     #                      "reset flag being set on their record in the import file.  The updated "
                                     #"password will be recorded to the export csv file.")
-                                    else:
-                                        self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
-                                                          "reset flag being set on their record in the import file.  The updated "
-                                                          "password will not be recorded since no ACCOUNT_INFO_EXPORT_PATH is configured in settings.")
+                                    #else:
+                                    #    self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
+                                    #                      "reset flag being set on their record in the import file.  The updated "
+                                    #                      "password will not be recorded since no ACCOUNT_INFO_EXPORT_PATH is configured in settings.")
+                                    self._logger.info(linkid + ": The user's password has been reset.  upn: " + upn + ", Initial Password: " + passwd)
                                 except Exception as e:
                                     # A problem occurred setting the password.
                                     self._logger.error(linkid + ": Attempting to reset password for existing user failed. "
@@ -353,8 +354,8 @@ class ADSyncer():
                                                            "\"User Must Change Password\" flag for this user. "
                                                            "The error details were: " + str(e))
 
-                                self._logger.info(linkid + ": New account has been created.  dn: "
-                                                  + adusr["distinguishedName"][0])
+                                self._logger.info(linkid + ": New account has been created.  upn: "
+                                                  + upn + ", Initial password: " + passwd)
                                 # Append the new user to a data structure which will be output to the accountinfo csv file
                                 # (if this option is enabled)
                                 #if self._args.AccountInfoExportPath:
