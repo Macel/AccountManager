@@ -181,24 +181,24 @@ class PasswordAssignment():
             pw = self._staticpass
         else:
             if self._passtype == PASS_TYPE_ALPHA:
-                passchars = "abcdefghijklmnopqrstuvwxyz" \
-                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                passchars = "abcdefghijkmnpqrstuvwxyz" \
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ"
                 while True:
                     pw = "".join(random.sample(passchars, self._length))
                     if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA):
                         break
             elif self._passtype == PASS_TYPE_ALPHA_NUMERIC:
-                passchars = "abcdefghijklmnopqrstuvwxyz" \
-                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
-                            "1234567890"
+                passchars = "abcdefghijkmnpqrstuvwxyz" \
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ" \
+                            "23456789"
                 while True:
                     pw = "".join(random.sample(passchars, self._length))
                     if self.verifyPasswordStrength(pw, PASS_TYPE_ALPHA_NUMERIC):
                         break
             elif self._passtype == PASS_TYPE_ALPHA_SYMBOLS:
-                passchars = "abcdefghijklmnopqrstuvwxyz" \
-                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
-                            "1234567890" \
+                passchars = "abcdefghijkmnpqrstuvwxyz" \
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ" \
+                            "123456789" \
                             "!@#$%^&*():;,.?/\\-=+\""
                 while True:
                     pw = "".join(random.sample(passchars, self._length))
