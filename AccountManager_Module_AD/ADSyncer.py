@@ -30,6 +30,7 @@ from Exceptions import NoFreeUserNamesException, \
 from PasswordAssignments import PasswordAssignment
 from NewUserNotifications import NewUserNotification
 from smtplib import SMTP, SMTPException
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 # import csv
 import datetime
@@ -157,12 +158,11 @@ class ADSyncer():
                                     # If this user has a notification assignment, add the notification to the password update notifications list.
                                     for notification in NEW_USER_NOTIFICATIONS:
                                         if notification.match(dsusr):
-                                            updated_account_info = "Account Type: AD, Username: " + upn + ", Initial Password: " \
-                                                + passwd + ", " + ", ".join(
-                                                    [col + ": " + self._adam.dataRow(linkid)[col]
-                                                     for col in ACCOUNT_NOTIFICATION_FIELDS])
+                                            updated_account_info = ["AD",upn,passwd] + \
+                                                [self._adam.dataRow(linkid)[col]
+                                                for col in ACCOUNT_NOTIFICATION_FIELDS]
                                             if notification.contacts in pass_reset_notify_emails:
-                                                pass_reset_notify_emails[notification.contacts] += [updated_account_info]
+                                                pass_reset_notify_emails[notification.contacts].append(updated_account_info)
                                             else:
                                                 pass_reset_notify_emails[notification.contacts] = [updated_account_info]
                                     #if self._args.AccountInfoExportPath:
@@ -364,12 +364,11 @@ class ADSyncer():
                                 # If this new user has a notification assignment, add the notification to the new user notifications list.
                                 for notification in NEW_USER_NOTIFICATIONS:
                                     if notification.match(dsusr):
-                                        new_account_info = "Account Type: AD, Username: " + upn + ", Initial Password: " \
-                                            + passwd + ", " + ", ".join(
-                                                [col + ": " + self._adam.dataRow(linkid)[col]
-                                                 for col in ACCOUNT_NOTIFICATION_FIELDS])
+                                        new_account_info = ["AD",upn,passwd] + \
+                                                    	   [self._adam.dataRow(linkid)[col]
+                                                    		for col in ACCOUNT_NOTIFICATION_FIELDS]
                                         if notification.contacts in notify_emails:
-                                            notify_emails[notification.contacts] += [new_account_info]
+                                            notify_emails[notification.contacts].append(new_account_info)
                                         else:
                                             notify_emails[notification.contacts] = [new_account_info]
                             else:
@@ -401,21 +400,33 @@ class ADSyncer():
         for recpts in notifications.keys():
             recipients = ",".join(map(str, recpts))
             subject = AD_USER_NOTIFICATION_SUBJECT
-            body = (
-                    AD_USER_NOTIFICATION_MSG
-                    + "\n" + "\n".join(notifications[recpts])
-                   )
-            msg = MIMEText(body)
+            body = ("<p>" + AD_USER_NOTIFICATION_MSG + "</p><table>\n"
+                "<tr>"
+                "<td><b>TYPE</b></td>"
+                "<td><b>USERNAME</b></td>"
+                "<td><b>PASS</b></td>"
+            )
+            for col in ACCOUNT_NOTIFICATION_FIELDS:
+                body += "<td><b>" + col + "</b></td>"
+            body += "</tr>\n"
+            for row in notifications[recpts]:
+                body += "<tr>"
+                for val in row:
+                    body += "<td>" + val + "</td>"
+                body += "</tr>\n"
+            body += "</html>"
+            msg = MIMEMultipart('alternative')
+            msgbody = MIMEText(body, 'html')
             msg['From'] = SMTP_FROM_ADDRESS
             msg['To'] = recipients
             msg['Subject'] = subject
+            msg.attach(msgbody)
             try:
                 server = SMTP(SMTP_SERVER_IP, SMTP_SERVER_PORT)
                 server.send_message(msg)
             except SMTPException as e:
-                self._logger.error("A problem occurred while attempting to send out a new user notification email. "
+                self._logger.error("A problem occurred while attempting to send out a password reset notification email. "
                                    + "Error details as follows: " + str(e))
-            # print("new account notification msg: " + str(msg))
 
     def _sendPasswordResetNotifications(self, notifications: dict):
         """
@@ -425,21 +436,33 @@ class ADSyncer():
         for recpts in notifications.keys():
             recipients = ",".join(map(str, recpts))
             subject = AD_PASS_RESET_NOTIFICATION_SUBJECT
-            body = (
-                    AD_PASS_RESET_NOTIFICATION_MSG
-                    + "\n" + "\n".join(notifications[recpts])
-                   )
-            msg = MIMEText(body)
+            body = ("<p>" + AD_PASS_RESET_NOTIFICATION_MSG + "</p><table>\n"
+                "<tr>"
+                "<td><b>TYPE</b></td>"
+                "<td><b>USERNAME</b></td>"
+                "<td><b>PASS</b></td>"
+            )
+            for col in ACCOUNT_NOTIFICATION_FIELDS:
+                body += "<td><b>" + col + "</b></td>"
+            body += "</tr>\n"
+            for row in notifications[recpts]:
+                body += "<tr>"
+                for val in row:
+                    body += "<td>" + val + "</td>"
+                body += "</tr>\n"
+            body += "</html>"
+            msg = MIMEMultipart('alternative')
+            msgbody = MIMEText(body, 'html')
             msg['From'] = SMTP_FROM_ADDRESS
             msg['To'] = recipients
             msg['Subject'] = subject
+            msg.attach(msgbody)
             try:
                 server = SMTP(SMTP_SERVER_IP, SMTP_SERVER_PORT)
                 server.send_message(msg)
             except SMTPException as e:
                 self._logger.error("A problem occurred while attempting to send out a password reset notification email. "
                                    + "Error details as follows: " + str(e))
-            # print("new account notification msg: " + str(msg))
 
     def _syncGroupMembership(self, dsusr: dict, adusr: dict, syncall: bool = False):
         """
