@@ -28,11 +28,6 @@ if __name__ == '__main__':
         required=True,
         choices=['CSV', 'TSV']
     )
-    parser.add_argument(
-        '--AccountInfoExportPath',
-        help='Path to optional new account export CSV',
-        required=False
-    )
 
     args = parser.parse_args()
 

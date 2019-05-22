@@ -15,7 +15,9 @@ from Settings import \
     PASSWORD_ASSIGNMENTS, NEW_USER_NOTIFICATIONS, SMTP_SERVER_IP, SMTP_SERVER_PORT, \
     SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
     AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT, \
-    ACCOUNT_INFO_FILE_FIELDS, RESET_PASS_COLUMN_NAME
+    RESET_PASS_COLUMN_NAME, AD_PASS_RESET_NOTIFICATION_SUBJECT, \
+    AD_PASS_RESET_NOTIFICATION_MSG, ACCOUNT_NOTIFICATION_FIELDS
+
 
 from AccountManager import AccountManager  # for atom code completion
 from AccountManager_Module_AD.ADAccountManager import \
@@ -29,7 +31,7 @@ from PasswordAssignments import PasswordAssignment
 from NewUserNotifications import NewUserNotification
 from smtplib import SMTP, SMTPException
 from email.mime.text import MIMEText
-import csv
+# import csv
 import datetime
 
 
@@ -62,6 +64,7 @@ class ADSyncer():
         self._logger.debug("pager total record count: " + str(pager.csvRecordCount))
         i = 0
         notify_emails = {}
+        pass_reset_notify_emails = {}
         while True:
             # With each page of records from the CSV file, run the sync process
             i = pager.getPage(i)
@@ -151,12 +154,23 @@ class ADSyncer():
                                 upn = adusr['userPrincipalName'][0]
                                 try:
                                     self._adam.setUserPassword(linkid, passwd)
-                                    if self._args.AccountInfoExportPath:
-                                        output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
-                                                            for col in ACCOUNT_INFO_FILE_FIELDS])
-                                        self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
-                                                          "reset flag being set on their record in the import file.  The updated "
-                                                          "password will be recorded to the export csv file.")
+                                    # If this user has a notification assignment, add the notification to the password update notifications list.
+                                    for notification in NEW_USER_NOTIFICATIONS:
+                                        if notification.match(dsusr):
+                                            updated_account_info = "Account Type: AD, Username: " + upn + ", Initial Password: " \
+                                                + passwd + ", " + ", ".join(
+                                                    [col + ": " + self._adam.dataRow(linkid)[col]
+                                                     for col in ACCOUNT_NOTIFICATION_FIELDS])
+                                            if notification.contacts in notify_emails:
+                                                pass_reset_notify_emails[notification.contacts] += [updated_account_info]
+                                            else:
+                                                pass_reset_notify_emails[notification.contacts] = [updated_account_info]
+                                    #if self._args.AccountInfoExportPath:
+                                    #    output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
+                                    #                        for col in ACCOUNT_INFO_FILE_FIELDS])
+                                    #    self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
+                                    #                      "reset flag being set on their record in the import file.  The updated "
+                                    #"password will be recorded to the export csv file.")
                                     else:
                                         self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
                                                           "reset flag being set on their record in the import file.  The updated "
@@ -343,15 +357,16 @@ class ADSyncer():
                                                   + adusr["distinguishedName"][0])
                                 # Append the new user to a data structure which will be output to the accountinfo csv file
                                 # (if this option is enabled)
-                                if self._args.AccountInfoExportPath:
-                                    output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
-                                     for col in ACCOUNT_INFO_FILE_FIELDS])
+                                #if self._args.AccountInfoExportPath:
+                                #    output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
+                                #     for col in ACCOUNT_INFO_FILE_FIELDS])
                                 # If this new user has a notification assignment, add the notification to the new user notifications list.
                                 for notification in NEW_USER_NOTIFICATIONS:
                                     if notification.match(dsusr):
-                                        new_account_info = "Username: " + upn + ", " + ", ".join(
-                                            [col + ": " + self._adam.dataRow(linkid)[col]
-                                             for col in ACCOUNT_INFO_FILE_FIELDS])
+                                        new_account_info = "Account Type: AD, Username: " + upn + ", Initial Password: " \
+                                            + passwd + ", " + ", ".join(
+                                                [col + ": " + self._adam.dataRow(linkid)[col]
+                                                 for col in ACCOUNT_NOTIFICATION_FIELDS])
                                         if notification.contacts in notify_emails:
                                             notify_emails[notification.contacts] += [new_account_info]
                                         else:
@@ -359,20 +374,21 @@ class ADSyncer():
                             else:
                                 # user is not active anyway, don't bother creating the user
                                 self._logger.debug(linkid + ": is not active, so will not bother creating a new account for this user.")
-                if (len(output_data) > 0):
+                #if (len(output_data) > 0):
                     # If there is new user data to output to CSV, write it now.
-                    try:
-                        with open(self._args.AccountInfoExportPath, mode='a', newline='') as output_file:
-                            writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
-                            writer.writerows(output_data)
-                    except Exception as e:
-                        self._logger.error(linkid + ": An error occurred while attempting to output new user account information to the export file. "
-                                           "Error details: " + str(e) + "\n\nData that was not successfully written to file as follows: "
-                                            + str(output_data))
+                #    try:
+                #        with open(self._args.AccountInfoExportPath, mode='a', newline='') as output_file:
+                #            writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
+                #            writer.writerows(output_data)
+                #    except Exception as e:
+                #        self._logger.error(linkid + ": An error occurred while attempting to output new user account information to the export file. "
+                #                           "Error details: " + str(e) + "\n\nData that was not successfully written to file as follows: "
+                #                            + str(output_data))
 
             if i == -1:  # End of CSV file reached
                 # Send out new user account notifications
                 self._sendNewUserNotifications(notify_emails)
+                self._sendPasswordResetNotifications(pass_reset_notify_emails)
                 self._logger.info("AD Sync Process complete.")
                 break
 
@@ -397,6 +413,30 @@ class ADSyncer():
                 server.send_message(msg)
             except SMTPException as e:
                 self._logger.error("A problem occurred while attempting to send out a new user notification email. "
+                                   + "Error details as follows: " + str(e))
+            # print("new account notification msg: " + str(msg))
+
+    def _sendPasswordResetNotifications(self, notifications: dict):
+        """
+        Takes a dictionary of the form { email-addresses : < new user info string > }
+        and sends notifications for each entry in the dictionary.
+        """
+        for recpts in notifications.keys():
+            recipients = ",".join(map(str, recpts))
+            subject = AD_PASS_RESET_NOTIFICATION_SUBJECT
+            body = (
+                    AD_PASS_RESET_NOTIFICATION_MSG
+                    + "\n" + "\n".join(notifications[recpts])
+                   )
+            msg = MIMEText(body)
+            msg['From'] = SMTP_FROM_ADDRESS
+            msg['To'] = recipients
+            msg['Subject'] = subject
+            try:
+                server = SMTP(SMTP_SERVER_IP, SMTP_SERVER_PORT)
+                server.send_message(msg)
+            except SMTPException as e:
+                self._logger.error("A problem occurred while attempting to send out a password reset notification email. "
                                    + "Error details as follows: " + str(e))
             # print("new account notification msg: " + str(msg))
 
