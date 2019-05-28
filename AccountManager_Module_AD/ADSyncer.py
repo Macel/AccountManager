@@ -120,6 +120,8 @@ class ADSyncer():
                                                    "sync attributes for this user.  Error details: "
                                                    + str(e))
                             try:
+                                if (linkid == 't4702'):
+                                    print("t4702")
                                 self._syncGroupMembership(dsusr, adusr)
                             except Exception as e:
                                 self._logger.error(linkid + "An error occurred while attempting to "
