@@ -32,8 +32,6 @@ from NewUserNotifications import NewUserNotification
 from smtplib import SMTP, SMTPException
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-# import csv
-import datetime
 
 
 # Define any characters that should be excluded from newly generated usernames
@@ -70,8 +68,6 @@ class ADSyncer():
             # With each page of records from the CSV file, run the sync process
             i = pager.getPage(i)
             currentPage = pager.page
-            output_data = []  # Will contain data for any new users that will be
-                              # written to the output CSV (if setting enabled)
 
             # With the current page, use ADAccountManager to sync data to AD
             self._logger.debug("begin accountmanager init")
@@ -119,8 +115,7 @@ class ADSyncer():
                             continue
                         # Don't bother syncing attributes/group membership if
                         # the user is not active.
-                        if (dsusr[DS_STATUS_COLUMN_NAME]
-                            in set(DS_STATUS_ACTIVE_VALUES)):
+                        if (dsusr[DS_STATUS_COLUMN_NAME] in set(DS_STATUS_ACTIVE_VALUES)):
                             self._logger.debug(linkid + " is active, syncing attributes"
                                                + " and group membership.")
                             try:
@@ -176,16 +171,6 @@ class ADSyncer():
                                                 pass_reset_notify_emails[notification.contacts].append(updated_account_info)
                                             else:
                                                 pass_reset_notify_emails[notification.contacts] = [updated_account_info]
-                                    #if self._args.AccountInfoExportPath:
-                                    #    output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
-                                    #                        for col in ACCOUNT_INFO_FILE_FIELDS])
-                                    #    self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
-                                    #                      "reset flag being set on their record in the import file.  The updated "
-                                    #"password will be recorded to the export csv file.")
-                                    #else:
-                                    #    self._logger.warn(linkid + ": The password has been reset for this user due to a force password "
-                                    #                      "reset flag being set on their record in the import file.  The updated "
-                                    #                      "password will not be recorded since no ACCOUNT_INFO_EXPORT_PATH is configured in settings.")
                                     self._logger.info(linkid + ": The user's password has been reset.  upn: " + upn + ", Initial Password: " + passwd)
                                 except Exception as e:
                                     # A problem occurred setting the password.
@@ -211,67 +196,66 @@ class ADSyncer():
                                                "sync the OU for this user.  Error details: "
                                                + str(e))
                     else:  # Linked user not found...
-                        # See if a user exists with a match in the secondary field.
-                        if (dsusr[DS_SECONDARY_MATCH_COLUMN] is not None
-                            and len(dsusr[DS_SECONDARY_MATCH_COLUMN])) > 0:
-                            # Don't match on an empty secondary field.
-                            try:
-                                adusr = self._adam.getUserInfo(AD_SECONDARY_MATCH_ATTRIBUTE,
-                                                               dsusr[DS_SECONDARY_MATCH_COLUMN],
-                                                               AD_TARGET_ACCOUNT_IDENTIFIER,
-                                                               *[atr.mappedAttribute
-                                                                 for atr in AD_ATTRIBUTE_MAP])
-                            except Exception as e:
-                                self._logger.error(linkid + ": An error occurred while attempting to query AD for "
-                                                   "information on this linked user. "
-                                                   "Error details: " + str(e))
-                                continue
-                        else:
-                            adusr = None
-                        if adusr is not None:
-                            # Secondary match found,
-                            # link the user by updating their ID in AD
-                            # Sync any updated information
+                        # Is the user active?
+                        if (dsusr[DS_STATUS_COLUMN_NAME] in set(DS_STATUS_ACTIVE_VALUES)):
+                            # See if a user exists with a match in the secondary field.
+                            if (dsusr[DS_SECONDARY_MATCH_COLUMN] is not None
+                                and len(dsusr[DS_SECONDARY_MATCH_COLUMN])) > 0:
+                                # Don't match on an empty secondary field.
+                                try:
+                                    adusr = self._adam.getUserInfo(AD_SECONDARY_MATCH_ATTRIBUTE,
+                                                                   dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                                   AD_TARGET_ACCOUNT_IDENTIFIER,
+                                                                   *[atr.mappedAttribute
+                                                                     for atr in AD_ATTRIBUTE_MAP])
+                                except Exception as e:
+                                    self._logger.error(linkid + ": An error occurred while attempting to query AD for "
+                                                       "information on this linked user. "
+                                                       "Error details: " + str(e))
+                                    continue
+                            else:
+                                adusr = None
+                            if adusr is not None:
+                                # Secondary match found,
+                                # link the user by updating their ID in AD
+                                # Sync any updated information
 
-                            # First verify that the found user is not already
-                            # linked to someone else in pschool..
-                            if adusr['powerschoolID'] is not None:
-                                self._logger.warn(
-                                    linkid + ": An AD account with a secondary "
-                                    "field match was found for this unlinked user, but "
-                                    "it appears to already be linked to another user.  "
-                                    "Since secondary match attributes must be unique, "
-                                    "this user cannot be linked until this issue is resolved. "
-                                    "The datasource may be providing a duplicate user. "
-                                    "The conflicting account in AD is: "
-                                    + adusr['distinguishedName'][0]
-                                )
-                                continue
+                                # First verify that the found user is not already
+                                # linked to someone else in pschool..
+                                if adusr['powerschoolID'] is not None:
+                                    self._logger.warn(
+                                        linkid + ": An AD account with a secondary "
+                                        "field match was found for this unlinked user, but "
+                                        "it appears to already be linked to another user.  "
+                                        "Since secondary match attributes must be unique, "
+                                        "this user cannot be linked until this issue is resolved. "
+                                        "The datasource may be providing a duplicate user. "
+                                        "The conflicting account in AD is: "
+                                        + adusr['distinguishedName'][0]
+                                    )
+                                    continue
 
-                            self._logger.debug(linkid + ": Secondary match found for '"
-                                               + AD_SECONDARY_MATCH_ATTRIBUTE
-                                               + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
-                                               + ".  Linking the user."
-                                               + "  Their account information will be synchronized"
-                                               + " on the next sync process run.")
-                            try:
-                                self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
-                                                    linkid)
-                            except Exception as e:
-                                self._logger.error(linkid + ": An error occurred while attempting to link an "
-                                                   "existing AD user to the datasource. "
-                                                   " Error details: " + str(e))
-                                continue
-                            self._logger.info(linkid + ": An unlinked AD user has been found with"
-                                              + " a matching secondary attribute and linked."
-                                              + " the rest of their information will be synced"
-                                              + " during the next sync process run.")
-                        else:
-                            # No secondary match found,
-                            # User is active?
-                            if (dsusr[DS_STATUS_COLUMN_NAME]
-                                in set(DS_STATUS_ACTIVE_VALUES)):
-                                ### Create the user ###
+                                self._logger.debug(linkid + ": Secondary match found for '"
+                                                   + AD_SECONDARY_MATCH_ATTRIBUTE
+                                                   + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
+                                                   + ".  Linking the user."
+                                                   + "  Their account information will be synchronized"
+                                                   + " on the next sync process run.")
+                                try:
+                                    self._adam.linkUser(dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                        linkid)
+                                except Exception as e:
+                                    self._logger.error(linkid + ": An error occurred while attempting to link an "
+                                                       "existing AD user to the datasource. "
+                                                       " Error details: " + str(e))
+                                    continue
+                                self._logger.info(linkid + ": An unlinked AD user has been found with"
+                                                  + " a matching secondary attribute and linked."
+                                                  + " the rest of their information will be synced"
+                                                  + " during the next sync process run.")
+                            else:
+                                # No secondary match found,
+                                # Create the user
                                 # Grab password for new user and set the
                                 # forcepwdchg flag accordingly
                                 if AD_SHOULD_GENERATE_PASSWORD:
@@ -399,20 +383,15 @@ class ADSyncer():
                                             notify_emails[notification.contacts].append(new_account_info)
                                         else:
                                             notify_emails[notification.contacts] = [new_account_info]
-                            else:
-                                # user is not active anyway, don't bother creating the user
-                                self._logger.debug(linkid + ": is not active, so will not bother creating a new account for this user.")
-                #if (len(output_data) > 0):
-                    # If there is new user data to output to CSV, write it now.
-                #    try:
-                #        with open(self._args.AccountInfoExportPath, mode='a', newline='') as output_file:
-                #            writer = csv.writer(output_file, delimiter=",", quotechar="\"", quoting=csv.QUOTE_ALL)
-                #            writer.writerows(output_data)
-                #    except Exception as e:
-                #        self._logger.error(linkid + ": An error occurred while attempting to output new user account information to the export file. "
-                #                           "Error details: " + str(e) + "\n\nData that was not successfully written to file as follows: "
-                #                            + str(output_data))
-
+                        else:
+                            # Don't bother looking for a secondary match,
+                            # or creating a new account,
+                            # the user is not active to begin with...
+                            # (for example, this could be a duplicate/old account)
+                            self._logger.debug(
+                                linkid + ": Unlinked user is not active, will not bother "
+                                "looking for secondary match or creating a new account for this user."
+                            )
             if i == -1:  # End of CSV file reached
                 # Send out new user account notifications
                 self._sendNewUserNotifications(notify_emails)
