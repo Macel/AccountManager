@@ -246,6 +246,7 @@ class ADSyncer():
                                     "The conflicting account in AD is: "
                                     + adusr['distinguishedName'][0]
                                 )
+                                continue
 
                             self._logger.debug(linkid + ": Secondary match found for '"
                                                + AD_SECONDARY_MATCH_ATTRIBUTE
