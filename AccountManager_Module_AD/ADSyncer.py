@@ -218,6 +218,7 @@ class ADSyncer():
                             try:
                                 adusr = self._adam.getUserInfo(AD_SECONDARY_MATCH_ATTRIBUTE,
                                                                dsusr[DS_SECONDARY_MATCH_COLUMN],
+                                                               AD_TARGET_ACCOUNT_IDENTIFIER,
                                                                *[atr.mappedAttribute
                                                                  for atr in AD_ATTRIBUTE_MAP])
                             except Exception as e:
@@ -231,6 +232,21 @@ class ADSyncer():
                             # Secondary match found,
                             # link the user by updating their ID in AD
                             # Sync any updated information
+
+                            # First verify that the found user is not already
+                            # linked to someone else in pschool..
+                            if adusr['powerschoolID'] is not None:
+                                self._logger.warn(
+                                    linkid + ": An AD account with a secondary "
+                                    "field match was found for this unlinked user, but
+                                    "it appears to already be linked to another user.  "
+                                    "Since secondary match attributes must be unique, "
+                                    "this user cannot be linked until this issue is resolved. "
+                                    "The datasource may be providing a duplicate user. "
+                                    "The conflicting account in AD is: "
+                                    + adusr['distinguishedName']
+                                )
+
                             self._logger.debug(linkid + ": Secondary match found for '"
                                                + AD_SECONDARY_MATCH_ATTRIBUTE
                                                + "'': " + dsusr[DS_SECONDARY_MATCH_COLUMN]
