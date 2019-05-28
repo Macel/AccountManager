@@ -15,7 +15,6 @@ from ldap.controls import SimplePagedResultsControl
 from ldap.modlist import addModlist, modifyModlist
 from ldap.filter import escape_filter_chars
 from Exceptions import PasswordNotSetException
-from string import lower
 
 
 """
@@ -480,7 +479,8 @@ class GetADAccountManager():
                 # a member of.
                 if adgrps is not None:
                     grps_to_assign = [grp for grp in groups
-                                      if grp.lower() not in map(lower, adgrps)]
+                                      if grp.lower() not in
+                                      map(lambda x:x.lower(), adgrps)]
                 else:
                     grps_to_assign = [grp for grp in groups]
 
@@ -509,7 +509,8 @@ class GetADAccountManager():
                 dn = adusr["distinguishedName"][0]
 
                 grps_to_remove = [grp for grp in groups
-                                  if grp.lower() in map(lower, adgrps)]
+                                  if grp.lower() in
+                                  map(lambda x:x.lower(), adgrps)]
                 modlist = [(ldap.MOD_DELETE, "member",
                             [dn.encode(self._targetEncoding)])]
                 for grp in grps_to_remove:
