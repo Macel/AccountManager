@@ -238,7 +238,7 @@ class ADSyncer():
                             if adusr['powerschoolID'] is not None:
                                 self._logger.warn(
                                     linkid + ": An AD account with a secondary "
-                                    "field match was found for this unlinked user, but
+                                    "field match was found for this unlinked user, but "
                                     "it appears to already be linked to another user.  "
                                     "Since secondary match attributes must be unique, "
                                     "this user cannot be linked until this issue is resolved. "
