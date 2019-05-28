@@ -107,6 +107,16 @@ class ADSyncer():
                         # Sync any updated information
                         self._logger.debug("Linked user found for id: " + linkid
                                            + ".  Syncing information.")
+                        # Verify that the user account has a valid UPN before continuing..
+                        if not adusr['userPrincipalName'] is None:
+                            upn = adusr['userPrincipalName'][0]
+                        else:
+                            self._logger.error(
+                                linkid + ": Found a user in AD with no userPrincipalName"
+                                " (upn) set. Cannot continue to sync information for this user until this"
+                                " is addressed.  Will attempt again on the next scheduled sync."
+                            )
+                            continue
                         # Don't bother syncing attributes/group membership if
                         # the user is not active.
                         if (dsusr[DS_STATUS_COLUMN_NAME]
@@ -120,8 +130,8 @@ class ADSyncer():
                                                    "sync attributes for this user.  Error details: "
                                                    + str(e))
                             try:
-                                if (linkid == 't4702'):
-                                    print("t4702")
+                                #if (linkid == 't4702'):
+                                #    print("t4702")
                                 self._syncGroupMembership(dsusr, adusr)
                             except Exception as e:
                                 self._logger.error(linkid + "An error occurred while attempting to "
@@ -154,7 +164,6 @@ class ADSyncer():
                                                        + "AD_SHOULD_GENERATE_PASSWORD is not set.  Cannot reset user password until "
                                                        + "this is resolved.")
                             if passwd:
-                                upn = adusr['userPrincipalName'][0]
                                 try:
                                     self._adam.setUserPassword(linkid, passwd)
                                     # If this user has a notification assignment, add the notification to the password update notifications list.
