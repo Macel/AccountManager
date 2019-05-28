@@ -244,7 +244,7 @@ class ADSyncer():
                                     "this user cannot be linked until this issue is resolved. "
                                     "The datasource may be providing a duplicate user. "
                                     "The conflicting account in AD is: "
-                                    + adusr['distinguishedName']
+                                    + adusr['distinguishedName'][0]
                                 )
 
                             self._logger.debug(linkid + ": Secondary match found for '"
