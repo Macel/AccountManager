@@ -423,6 +423,7 @@ class GetADAccountManager():
                            ("userPrincipalName", [upn.encode(self._targetEncoding)]),
                            ("objectClass", [i.encode(self._targetEncoding) for i in objclass]),
                            ("sAMAccountName", [sAMAccountName.encode(self._targetEncoding)]),
+                           ("mail", [upn.encode(self._targetEncoding)]),
                            (self._targetLinkAttribute, [linkid.encode(self._targetEncoding)])]
 
                 # Append attributes to the mod list.

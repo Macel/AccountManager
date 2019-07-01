@@ -308,7 +308,7 @@ class ADSyncer():
                                 # Set additional attributes for the user per
                                 # the attribute map...
                                 try:
-                                    self._syncAttributes(dsusr, adusr, syncall=True)
+                                    self._syncAttributes(dsusr, adusr)
                                 except Exception as e:
                                     self._logger.error(linkid + ": An error occurred while syncing attributes "
                                                        "for this user.  Error details: " + str(e))
