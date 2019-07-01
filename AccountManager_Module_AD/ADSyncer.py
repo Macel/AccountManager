@@ -183,7 +183,7 @@ class ADSyncer():
                             self._syncActiveStatus(dsusr, adusr)
                         except Exception as e:
                             self._logger.error(linkid + ": An error occurred while attempting to "
-                                               "sync active status for this user.  Error details: "
+                                               "sync active status for " + upn + ".  Error details: "
                                                + str(e))
 
                         # Sync the OU last because if a user's OU changes,
@@ -368,11 +368,6 @@ class ADSyncer():
 
                                 self._logger.info(linkid + ": New account has been created.  upn: "
                                                   + upn + ", Initial password: " + passwd)
-                                # Append the new user to a data structure which will be output to the accountinfo csv file
-                                # (if this option is enabled)
-                                #if self._args.AccountInfoExportPath:
-                                #    output_data.append([datetime.datetime.now(), upn, passwd] + [self._adam.dataRow(linkid)[col]
-                                #     for col in ACCOUNT_INFO_FILE_FIELDS])
                                 # If this new user has a notification assignment, add the notification to the new user notifications list.
                                 for notification in NEW_USER_NOTIFICATIONS:
                                     if notification.match(dsusr):
