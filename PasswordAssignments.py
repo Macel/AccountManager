@@ -33,6 +33,8 @@ class PasswordAssignment():
         If PASS_TYPE_WORDS is provided,
         firstwords and secondwords should also be provided as tuples of strings
         containing the words that should be used to build the password.
+        PASS_TYPE_WORDS appends a single random 1 digit number to the end of
+        the password.
 
         IF PASS_TYPE_STATIC is provided, staticpass must contain the password
         to be assigned to the user account.  It is recommended to enforce a
@@ -170,7 +172,7 @@ class PasswordAssignment():
             while len(pw) < self._length:
                 pw = "" + random.choice(self._firstwords) \
                         + random.choice(self._secondwords) \
-                        + str(random.randrange(10, 99))
+                        + str(random.randrange(0, 9))
                 if i == 1000:
                     raise LookupError("Could not generate a long enough password "
                                       "with the given word lists in a reasonable "
