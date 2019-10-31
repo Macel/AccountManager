@@ -485,7 +485,7 @@ class ADSyncer():
         # Check if the user is to be deactivated. If so, and the option to
         # remove deactivated users from groups is set, remove this user from
         # all groups...
-        if status not in DS_STATUS_ACTIVE_VALUES
+        if status not in DS_STATUS_ACTIVE_VALUES \
         and AD_REMOVE_INACTIVE_USERS_FROM_GROUPS:
             # Get all groups user is member of, deassign
             allgrps = self._adam.getLinkedUserInfo(linkid, "memberOf")
