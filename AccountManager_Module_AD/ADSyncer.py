@@ -16,7 +16,8 @@ from Settings import \
     SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
     AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT, \
     RESET_PASS_COLUMN_NAME, AD_PASS_RESET_NOTIFICATION_SUBJECT, \
-    AD_PASS_RESET_NOTIFICATION_MSG, ACCOUNT_NOTIFICATION_FIELDS
+    AD_PASS_RESET_NOTIFICATION_MSG, ACCOUNT_NOTIFICATION_FIELDS, \
+    AD_REMOVE_INACTIVE_USERS_FROM_GROUPS
 
 
 from AccountManager import AccountManager  # for atom code completion
@@ -474,26 +475,35 @@ class ADSyncer():
         """
 
         linkid = dsusr[DS_ACCOUNT_IDENTIFIER]
+        status = dsusr[DS_STATUS_COLUMN_NAME]
 
         syncedgrps = [grp for grp in AD_GROUP_ASSIGNMENTS if
                       (grp.synchronized or syncall)]
         matchedgrps = [grp.groupDN for grp in syncedgrps if grp.match(dsusr)]
         nomatchedgrps = [grp.groupDN for grp in syncedgrps
                          if not grp.match(dsusr)]
+        # Check if the user is to be deactivated. If so, and the option to
+        # remove deactivated users from groups is set, remove this user from
+        # all groups...
+        if status not in DS_STATUS_ACTIVE_VALUES
+        and AD_REMOVE_INACTIVE_USERS_FROM_GROUPS:
+            # Get all groups user is member of, deassign
+            allgrps = self._adam.getLinkedUserInfo(linkid, "memberOf")
+            result = self._adam.deassignUserGroups(linkid, *allgrps)
+        else:
+            # First ensure that the user is assigned to any synced groups whose
+            # rules they match.
+            result = self._adam.assignUserGroups(linkid, *matchedgrps)
+            if len(result) > 0:
+                self._logger.info(linkid + ": was added to the following group(s): "
+                                  + str(result))
 
-        # First ensure that the user is assigned to any synced groups whose
-        # rules they match.
-        result = self._adam.assignUserGroups(linkid, *matchedgrps)
-        if len(result) > 0:
-            self._logger.info(linkid + ": was added to the following group(s): "
-                              + str(result))
-
-        # Now verify that the user is not in any synchronized groups that
-        # they do *not* match the rules for....
-        result = self._adam.deassignUserGroups(linkid, *nomatchedgrps)
-        if len(result) > 0:
-            self._logger.info(linkid + ": was removed from the following "
-                              + "group(s): " + str(result))
+            # Now verify that the user is not in any synchronized groups that
+            # they do *not* match the rules for....
+            result = self._adam.deassignUserGroups(linkid, *nomatchedgrps)
+            if len(result) > 0:
+                self._logger.info(linkid + ": was removed from the following "
+                                  + "group(s): " + str(result))
 
     def _syncOU(self, dsusr: dict, adusr: dict):
         """
