@@ -116,26 +116,26 @@ class ADSyncer():
                             continue
                         # Don't bother syncing attributes/group membership if
                         # the user is not active.
-                        if (dsusr[DS_STATUS_COLUMN_NAME] in set(DS_STATUS_ACTIVE_VALUES)):
-                            self._logger.debug(linkid + " is active, syncing attributes"
-                                               + " and group membership.")
-                            try:
-                                self._syncAttributes(dsusr, adusr)
-                            except Exception as e:
-                                self._logger.error(linkid + "An error occurred while attempting to "
-                                                   "sync attributes for this user.  Error details: "
-                                                   + str(e))
-                            try:
-                                #if (linkid == 't4702'):
-                                #    print("t4702")
-                                self._syncGroupMembership(dsusr, adusr)
-                            except Exception as e:
-                                self._logger.error(linkid + "An error occurred while attempting to "
-                                                   "sync group membership for this user.  Error details: "
-                                                   + str(e))
-                        else:
-                            self._logger.debug(linkid + " is not active, will not bother"
-                                               + " syncing attributes/group membership.")
+                        # UPDATE: 7/1/2020 - We actually do need to sync because we need to remove
+                        # inactive users from synced groups.
+                        # if (dsusr[DS_STATUS_COLUMN_NAME] in set(DS_STATUS_ACTIVE_VALUES)):
+                        self._logger.debug(linkid + " is active, syncing attributes"
+                                           + " and group membership.")
+                        try:
+                            self._syncAttributes(dsusr, adusr)
+                        except Exception as e:
+                            self._logger.error(linkid + "An error occurred while attempting to "
+                                               "sync attributes for this user.  Error details: "
+                                               + str(e))
+                        try:
+                            self._syncGroupMembership(dsusr, adusr)
+                        except Exception as e:
+                            self._logger.error(linkid + "An error occurred while attempting to "
+                                               "sync group membership for this user.  Error details: "
+                                               + str(e))
+                        # else:
+                        #    self._logger.debug(linkid + " is not active, will not bother"
+                        #                       + " syncing attributes/group membership.")
 
                         # Check to see if a password reset is required and do so if necessary.
                         r = None
