@@ -16,8 +16,7 @@ from Settings import \
     SMTP_FROM_ADDRESS, SMTP_SERVER_PASSWORD, SMTP_SERVER_USERNAME, \
     AD_USER_NOTIFICATION_MSG, AD_USER_NOTIFICATION_SUBJECT, \
     RESET_PASS_COLUMN_NAME, AD_PASS_RESET_NOTIFICATION_SUBJECT, \
-    AD_PASS_RESET_NOTIFICATION_MSG, ACCOUNT_NOTIFICATION_FIELDS, \
-    AD_REMOVE_INACTIVE_USERS_FROM_GROUPS
+    AD_PASS_RESET_NOTIFICATION_MSG, ACCOUNT_NOTIFICATION_FIELDS
 
 
 from AccountManager import AccountManager  # for atom code completion
@@ -114,12 +113,8 @@ class ADSyncer():
                                 " is addressed.  Will attempt again on the next scheduled sync."
                             )
                             continue
-                        # Don't bother syncing attributes/group membership if
-                        # the user is not active.
-                        # UPDATE: 7/1/2020 - We actually do need to sync because we need to remove
-                        # inactive users from synced groups.
-                        # if (dsusr[DS_STATUS_COLUMN_NAME] in set(DS_STATUS_ACTIVE_VALUES)):
-                        self._logger.debug(linkid + " is active, syncing attributes"
+
+                        self._logger.debug(linkid + " syncing attributes"
                                            + " and group membership.")
                         try:
                             self._syncAttributes(dsusr, adusr)
@@ -128,15 +123,21 @@ class ADSyncer():
                                                "sync attributes for this user.  Error details: "
                                                + str(e))
                         try:
-                            self._syncGroupMembership(dsusr, adusr)
+                            # If the AD user is inactive,
+                            # force eval of all group membership rules...
+                            # If the user is to be reactivated, this will
+                            # ensure they are re-added to the appropriate groups
+
+                            if self._adam.userEnabled(linkid):
+                                self._syncGroupMembership(dsusr, adusr)
+                            else:
+                                self._syncGroupMembership(dsusr=dsusr,
+                                                          adusr=adusr,
+                                                          syncall=True)
                         except Exception as e:
                             self._logger.error(linkid + "An error occurred while attempting to "
                                                "sync group membership for this user.  Error details: "
                                                + str(e))
-                        # else:
-                        #    self._logger.debug(linkid + " is not active, will not bother"
-                        #                       + " syncing attributes/group membership.")
-
                         # Check to see if a password reset is required and do so if necessary.
                         r = None
                         passwd = None
@@ -482,14 +483,13 @@ class ADSyncer():
         matchedgrps = [grp.groupDN for grp in syncedgrps if grp.match(dsusr)]
         nomatchedgrps = [grp.groupDN for grp in syncedgrps
                          if not grp.match(dsusr)]
-        # Check if the user is to be deactivated. If so, and the option to
-        # remove deactivated users from groups is set, remove this user from
+        # Check if the user is to be deactivated. If so, remove this user from
         # all groups...
-        if status not in DS_STATUS_ACTIVE_VALUES \
-        and AD_REMOVE_INACTIVE_USERS_FROM_GROUPS:
+        if status not in DS_STATUS_ACTIVE_VALUES:
             # Get all groups user is member of, deassign
-            allgrps = self._adam.getLinkedUserInfo(linkid, "memberOf")
-            result = self._adam.deassignUserGroups(linkid, *allgrps)
+            allgrps = self._adam.getLinkedUserInfo(linkid, "memberOf")["memberOf"]
+            if allgrps:
+                result = self._adam.deassignUserGroups(linkid, *allgrps)
         else:
             # First ensure that the user is assigned to any synced groups whose
             # rules they match.
